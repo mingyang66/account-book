@@ -321,71 +321,79 @@ class MainWindow(QMainWindow):
         layout.setContentsMargins(24, 16, 24, 16)
         layout.setSpacing(12)
 
-        filter_layout = QHBoxLayout()
-        filter_layout.setSpacing(12)
+        filter_bar = QFrame()
+        filter_bar.setObjectName("filterBar")
+        filter_layout = QHBoxLayout(filter_bar)
+        filter_layout.setContentsMargins(16, 12, 16, 12)
+        filter_layout.setSpacing(8)
 
-        filter_layout.addWidget(QLabel("从"))
+        start_label = QLabel("从")
+        start_label.setObjectName("filter_label")
         self.tx_start_date = QDateEdit()
         self.tx_start_date.setCalendarPopup(True)
         self.tx_start_date.setDisplayFormat("yyyy-MM-dd")
         self.tx_start_date.setDate(QDate.currentDate().addMonths(-1))
-        self.tx_start_date.setFixedWidth(140)
-        filter_layout.addWidget(self.tx_start_date)
+        self.tx_start_date.setMinimumWidth(100)
+        self.tx_start_date.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.tx_start_date.setFixedHeight(38)
+        filter_layout.addWidget(start_label)
+        filter_layout.addWidget(self.tx_start_date, 2)
 
-        filter_layout.addWidget(QLabel("到"))
+        end_label = QLabel("到")
+        end_label.setObjectName("filter_label")
         self.tx_end_date = QDateEdit()
         self.tx_end_date.setCalendarPopup(True)
         self.tx_end_date.setDisplayFormat("yyyy-MM-dd")
         self.tx_end_date.setDate(QDate.currentDate())
-        self.tx_end_date.setFixedWidth(140)
-        filter_layout.addWidget(self.tx_end_date)
+        self.tx_end_date.setMinimumWidth(100)
+        self.tx_end_date.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.tx_end_date.setFixedHeight(38)
+        filter_layout.addWidget(end_label)
+        filter_layout.addWidget(self.tx_end_date, 2)
 
-        filter_layout.addWidget(QLabel("类型"))
+        type_label = QLabel("类型")
+        type_label.setObjectName("filter_label")
         self.tx_type_filter = QComboBox()
         self.tx_type_filter.addItems(["全部", "收入", "支出"])
-        self.tx_type_filter.setFixedWidth(80)
-        filter_layout.addWidget(self.tx_type_filter)
+        self.tx_type_filter.setMinimumWidth(65)
+        self.tx_type_filter.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.tx_type_filter.setFixedHeight(38)
+        filter_layout.addWidget(type_label)
+        filter_layout.addWidget(self.tx_type_filter, 1)
 
-        filter_layout.addWidget(QLabel("分类"))
+        cat_label = QLabel("分类")
+        cat_label.setObjectName("filter_label")
         self.tx_cat_filter = QComboBox()
         self.tx_cat_filter.addItem("全部", None)
         for cat in self.db.get_categories():
             self.tx_cat_filter.addItem(f"{cat['icon']} {cat['name']}", cat['id'])
-        self.tx_cat_filter.setFixedWidth(130)
-        filter_layout.addWidget(self.tx_cat_filter)
+        self.tx_cat_filter.setMinimumWidth(80)
+        self.tx_cat_filter.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.tx_cat_filter.setFixedHeight(38)
+        filter_layout.addWidget(cat_label)
+        filter_layout.addWidget(self.tx_cat_filter, 2)
 
         query_btn = QPushButton("🔍 查询")
-        query_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #1890ff;
-                color: white;
-                border: none;
-                border-radius: 6px;
-                padding: 6px 16px;
-                font-size: 13px;
-                font-weight: bold;
-            }
-            QPushButton:hover { background-color: #40a9ff; }
-        """)
+        query_btn.setObjectName("query_btn")
+        query_btn.setCursor(Qt.PointingHandCursor)
+        query_btn.setMinimumWidth(72)
+        query_btn.setFixedHeight(38)
         query_btn.clicked.connect(self.refresh_transactions)
         filter_layout.addWidget(query_btn)
-
-        filter_layout.addStretch()
 
         add_btn = QPushButton("＋ 记一笔")
         add_btn.setObjectName("add_btn")
         add_btn.setCursor(Qt.PointingHandCursor)
+        add_btn.setMinimumWidth(88)
+        add_btn.setFixedHeight(38)
         add_btn.clicked.connect(self.on_add_transaction)
         filter_layout.addWidget(add_btn)
 
-        layout.addLayout(filter_layout)
+        layout.addWidget(filter_bar)
 
-        summary_row = QHBoxLayout()
         self.tx_summary_label = QLabel("")
-        self.tx_summary_label.setStyleSheet("color: #595959; font-size: 13px; padding: 4px 0;")
-        summary_row.addWidget(self.tx_summary_label)
-        summary_row.addStretch()
-        layout.addLayout(summary_row)
+        self.tx_summary_label.setObjectName("filter_label")
+        layout.addWidget(self.tx_summary_label)
 
         self.tx_table = QTableWidget()
         self.tx_table.setColumnCount(7)
@@ -500,8 +508,15 @@ class MainWindow(QMainWindow):
         layout.setContentsMargins(24, 16, 24, 16)
         layout.setSpacing(12)
 
-        header = QHBoxLayout()
-        header.addWidget(QLabel("统计周期"))
+        filter_bar = QFrame()
+        filter_bar.setObjectName("filterBar")
+        header = QHBoxLayout(filter_bar)
+        header.setContentsMargins(20, 14, 20, 14)
+        header.setSpacing(14)
+
+        period_label = QLabel("统计周期")
+        period_label.setObjectName("filter_label")
+        header.addWidget(period_label)
 
         self.stat_year = QComboBox()
         current_year = date.today().year
@@ -511,7 +526,9 @@ class MainWindow(QMainWindow):
         self.stat_year.setFixedWidth(100)
         header.addWidget(self.stat_year)
 
-        header.addWidget(QLabel("年"))
+        year_label = QLabel("年")
+        year_label.setObjectName("filter_label")
+        header.addWidget(year_label)
 
         self.stat_month = QComboBox()
         for m in range(1, 13):
@@ -520,26 +537,18 @@ class MainWindow(QMainWindow):
         self.stat_month.setFixedWidth(80)
         header.addWidget(self.stat_month)
 
-        header.addWidget(QLabel("月"))
+        month_label = QLabel("月")
+        month_label.setObjectName("filter_label")
+        header.addWidget(month_label)
 
         query_btn = QPushButton("🔍 查询")
-        query_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #1890ff;
-                color: white;
-                border: none;
-                border-radius: 6px;
-                padding: 6px 16px;
-                font-size: 13px;
-                font-weight: bold;
-            }
-            QPushButton:hover { background-color: #40a9ff; }
-        """)
+        query_btn.setObjectName("query_btn")
+        query_btn.setCursor(Qt.PointingHandCursor)
         query_btn.clicked.connect(self.refresh_statistics)
         header.addWidget(query_btn)
 
         header.addStretch()
-        layout.addLayout(header)
+        layout.addWidget(filter_bar)
 
         stat_cards = QHBoxLayout()
         stat_cards.setSpacing(16)
@@ -698,24 +707,6 @@ class MainWindow(QMainWindow):
         add_btn = QPushButton("+ 新增账号")
         add_btn.setObjectName("add_btn")
         add_btn.setCursor(Qt.PointingHandCursor)
-        add_btn.setFixedHeight(36)
-        add_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #1890ff;
-                color: white;
-                border: none;
-                border-radius: 6px;
-                padding: 8px 20px;
-                font-size: 13px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #40a9ff;
-            }
-            QPushButton:pressed {
-                background-color: #096dd9;
-            }
-        """)
         add_btn.clicked.connect(self.on_add_account)
         header.addWidget(add_btn)
 

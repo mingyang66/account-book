@@ -103,15 +103,52 @@ QLabel#stat_value_balance {
     color: #1890ff;
 }
 
+QPushButton#query_btn {
+    background-color: #ffffff;
+    color: #1890ff;
+    border: 1px solid #1890ff;
+    border-radius: 6px;
+    padding: 0 12px;
+    font-size: 13px;
+    font-weight: bold;
+}
+
+QPushButton#query_btn:hover {
+    background-color: #e6f7ff;
+    border-color: #40a9ff;
+    color: #40a9ff;
+}
+
+QPushButton#query_btn:pressed {
+    background-color: #bae7ff;
+}
+
+QFrame#filterBar {
+    background-color: #fafafa;
+    border: 1px solid #f0f0f0;
+    border-radius: 10px;
+}
+
+QFrame#filterBar QDateEdit, QFrame#filterBar QComboBox {
+    padding: 0 8px;
+    min-height: 36px;
+    max-height: 36px;
+}
+
+QLabel#filter_label {
+    color: #8c8c8c;
+    font-size: 13px;
+    font-weight: 500;
+}
+
 QPushButton#add_btn {
     background-color: #1890ff;
     color: white;
     border: none;
-    border-radius: 8px;
-    padding: 10px 24px;
-    font-size: 14px;
+    border-radius: 6px;
+    padding: 0 12px;
+    font-size: 13px;
     font-weight: bold;
-    min-height: 32px;
 }
 
 QPushButton#add_btn:hover {

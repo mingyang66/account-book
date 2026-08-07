@@ -1,4 +1,4 @@
-from PySide6.QtCore import QDate, Qt
+from PySide6.QtCore import QDate, Signal, Qt
 from PySide6.QtWidgets import (
     QButtonGroup, QDialog, QGridLayout, QHBoxLayout, QLabel,
     QPushButton, QSizePolicy, QVBoxLayout
@@ -206,6 +206,8 @@ class MonthPickerDialog(QDialog):
 
 
 class MonthPicker(QPushButton):
+    periodChanged = Signal(int, int)
+
     def __init__(self, year=None, month=None, parent=None):
         super().__init__(parent)
         today = QDate.currentDate()
@@ -224,9 +226,12 @@ class MonthPicker(QPushButton):
 
     def set_period(self, year, month):
         if 1 <= month <= 12:
+            changed = (year, month) != (self._year, self._month)
             self._year = year
             self._month = month
             self._update_text()
+            if changed:
+                self.periodChanged.emit(year, month)
 
     def year(self):
         return self._year

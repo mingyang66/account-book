@@ -48,6 +48,129 @@ QLabel#page_title {
     margin-bottom: 12px;
 }
 
+QLabel#dashboard_title {
+    color: #1a1a1a;
+    font-size: 17px;
+    font-weight: bold;
+}
+
+QLabel#dashboard_section_title {
+    color: #1a1a1a;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+QFrame#dashboard_panel {
+    background-color: #ffffff;
+    border: 1px solid #edf0f5;
+    border-radius: 12px;
+}
+
+QFrame#dashboard_card_income,
+QFrame#dashboard_card_expense,
+QFrame#dashboard_card_balance,
+QFrame#dashboard_card_count {
+    border-radius: 12px;
+    min-height: 78px;
+}
+
+QFrame#dashboard_card_income {
+    background-color: #f6ffed;
+    border: 1px solid #b7eb8f;
+}
+
+QFrame#dashboard_card_expense {
+    background-color: #fff1f0;
+    border: 1px solid #ffa39e;
+}
+
+QFrame#dashboard_card_balance {
+    background-color: #e6f7ff;
+    border: 1px solid #91d5ff;
+}
+
+QFrame#dashboard_card_count {
+    background-color: #fffbe6;
+    border: 1px solid #ffe58f;
+}
+
+QLabel#dashboard_card_title {
+    color: #8c8c8c;
+    font-size: 12px;
+}
+
+QLabel#dashboard_value_income,
+QLabel#dashboard_value_expense,
+QLabel#dashboard_value_balance,
+QLabel#dashboard_value_count {
+    font-size: 21px;
+    font-weight: bold;
+}
+
+QLabel#dashboard_value_income {
+    color: #389e0d;
+}
+
+QLabel#dashboard_value_expense {
+    color: #cf1322;
+}
+
+QLabel#dashboard_value_balance {
+    color: #096dd9;
+}
+
+QLabel#dashboard_value_count {
+    color: #d48806;
+}
+
+QLabel#dashboard_card_detail {
+    color: #8c8c8c;
+    font-size: 11px;
+}
+
+QPushButton#link_btn {
+    background-color: transparent;
+    color: #1890ff;
+    border: none;
+    padding: 4px 8px;
+    font-size: 12px;
+}
+
+QPushButton#link_btn:hover {
+    color: #40a9ff;
+    text-decoration: underline;
+}
+
+QLabel#dashboard_empty {
+    color: #bfbfbf;
+    font-size: 13px;
+    padding: 50px 0;
+}
+
+QLabel#dashboard_category_name {
+    color: #595959;
+    font-size: 12px;
+}
+
+QLabel#dashboard_category_amount {
+    color: #f5222d;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+QProgressBar#dashboard_category_progress {
+    background-color: #f0f0f0;
+    border: none;
+    border-radius: 3px;
+    min-height: 6px;
+    max-height: 6px;
+}
+
+QProgressBar#dashboard_category_progress::chunk {
+    background-color: #ff7875;
+    border-radius: 3px;
+}
+
 QFrame#stat_card {
     background-color: #ffffff;
     border: 1px solid #e8e8e8;

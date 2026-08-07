@@ -7,7 +7,10 @@ from PySide6.QtWidgets import (
     QLineEdit, QAbstractItemView, QMenu, QDialog
 )
 from PySide6.QtCore import Qt, QDate
-from PySide6.QtGui import QFont, QColor, QIcon
+from PySide6.QtGui import QFont, QColor, QIcon, QPainter
+from PySide6.QtCharts import (
+    QBarCategoryAxis, QBarSeries, QBarSet, QChart, QChartView, QValueAxis
+)
 from ui.dialogs import TransactionDialog
 from ui.account_dialog import AccountFormDialog
 from ui.date_range_picker import DateRangePicker
@@ -210,28 +213,34 @@ class MainWindow(QMainWindow):
         page = QWidget()
         layout = QVBoxLayout(page)
         layout.setContentsMargins(24, 16, 24, 16)
-        layout.setSpacing(16)
+        layout.setSpacing(14)
 
-        year = date.today().year
-        month = date.today().month
-        self.dash_year_label = QLabel(f"{year} 年")
-        self.dash_month_label = QLabel(f"{month} 月")
-
-        month_sel = QHBoxLayout()
-        month_sel.addWidget(QLabel("💰 本月概览  "))
-        month_sel.addStretch()
-        month_sel.addWidget(self.dash_year_label)
-        month_sel.addWidget(QLabel(" · "))
-        month_sel.addWidget(self.dash_month_label)
-        layout.addLayout(month_sel)
+        overview_header = QHBoxLayout()
+        overview_header.setSpacing(10)
+        overview_title = QLabel("财务概览")
+        overview_title.setObjectName("dashboard_title")
+        overview_header.addWidget(overview_title)
+        overview_header.addStretch()
+        today = date.today()
+        self.dash_period = MonthPicker(today.year, today.month)
+        self.dash_period.setFixedSize(178, 38)
+        self.dash_period.periodChanged.connect(self.refresh_dashboard)
+        overview_header.addWidget(self.dash_period)
+        add_button = QPushButton("＋ 记一笔")
+        add_button.setObjectName("add_btn")
+        add_button.setCursor(Qt.PointingHandCursor)
+        add_button.setFixedSize(96, 38)
+        add_button.clicked.connect(self.on_add_transaction)
+        overview_header.addWidget(add_button)
+        layout.addLayout(overview_header)
 
         cards_layout = QHBoxLayout()
-        cards_layout.setSpacing(16)
+        cards_layout.setSpacing(12)
 
-        self.income_card = self.create_stat_card("本月收入", "0.00", "income")
-        self.expense_card = self.create_stat_card("本月支出", "0.00", "expense")
-        self.balance_card = self.create_stat_card("本月结余", "0.00", "balance")
-        self.count_card = self.create_stat_card("交易笔数", "0", "income")
+        self.income_card = self.create_dashboard_card("收入", "income")
+        self.expense_card = self.create_dashboard_card("支出", "expense")
+        self.balance_card = self.create_dashboard_card("结余", "balance")
+        self.count_card = self.create_dashboard_card("交易笔数", "count")
 
         cards_layout.addWidget(self.income_card)
         cards_layout.addWidget(self.expense_card)
@@ -239,11 +248,55 @@ class MainWindow(QMainWindow):
         cards_layout.addWidget(self.count_card)
         layout.addLayout(cards_layout)
 
-        layout.addSpacing(8)
-        recent_title = QLabel("📋 最近交易")
-        recent_title.setFont(QFont("", 15, QFont.Bold))
-        recent_title.setStyleSheet("color: #1a1a1a; padding-top: 8px;")
-        layout.addWidget(recent_title)
+        insights_layout = QHBoxLayout()
+        insights_layout.setSpacing(12)
+
+        trend_panel = QFrame()
+        trend_panel.setObjectName("dashboard_panel")
+        trend_layout = QVBoxLayout(trend_panel)
+        trend_layout.setContentsMargins(16, 14, 16, 12)
+        trend_layout.setSpacing(8)
+        trend_title = QLabel("近 6 个月收支趋势")
+        trend_title.setObjectName("dashboard_section_title")
+        trend_layout.addWidget(trend_title)
+        self.dash_chart = QChart()
+        self.dash_chart.setAnimationOptions(QChart.SeriesAnimations)
+        self.dash_chart.setBackgroundVisible(False)
+        self.dash_chart.legend().setAlignment(Qt.AlignBottom)
+        self.dash_chart.legend().setLabelColor(QColor("#595959"))
+        self.dash_chart_view = QChartView(self.dash_chart)
+        self.dash_chart_view.setRenderHint(QPainter.Antialiasing)
+        self.dash_chart_view.setMinimumHeight(160)
+        self.dash_chart_view.setMaximumHeight(210)
+        trend_layout.addWidget(self.dash_chart_view)
+        insights_layout.addWidget(trend_panel, 3)
+
+        category_panel = QFrame()
+        category_panel.setObjectName("dashboard_panel")
+        category_layout = QVBoxLayout(category_panel)
+        category_layout.setContentsMargins(16, 14, 16, 12)
+        category_layout.setSpacing(8)
+        category_title = QLabel("本月支出构成")
+        category_title.setObjectName("dashboard_section_title")
+        category_layout.addWidget(category_title)
+        self.dash_category_layout = QVBoxLayout()
+        self.dash_category_layout.setSpacing(8)
+        category_layout.addLayout(self.dash_category_layout)
+        category_layout.addStretch()
+        insights_layout.addWidget(category_panel, 2)
+        layout.addLayout(insights_layout)
+
+        recent_header = QHBoxLayout()
+        recent_title = QLabel("最近交易")
+        recent_title.setObjectName("dashboard_section_title")
+        recent_header.addWidget(recent_title)
+        recent_header.addStretch()
+        view_all_button = QPushButton("查看全部  →")
+        view_all_button.setObjectName("link_btn")
+        view_all_button.setCursor(Qt.PointingHandCursor)
+        view_all_button.clicked.connect(lambda: self.on_nav_clicked(1))
+        recent_header.addWidget(view_all_button)
+        layout.addLayout(recent_header)
 
         self.dash_table = QTableWidget()
         self.dash_table.setColumnCount(5)
@@ -254,9 +307,33 @@ class MainWindow(QMainWindow):
         self.dash_table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.dash_table.verticalHeader().setVisible(False)
         self.dash_table.setAlternatingRowColors(True)
+        self.dash_table.setMaximumHeight(190)
         layout.addWidget(self.dash_table)
 
         return page
+
+    def create_dashboard_card(self, title, kind):
+        card = QFrame()
+        card.setObjectName(f"dashboard_card_{kind}")
+        card_layout = QVBoxLayout(card)
+        card_layout.setContentsMargins(16, 14, 16, 14)
+        card_layout.setSpacing(5)
+
+        title_label = QLabel(title)
+        title_label.setObjectName("dashboard_card_title")
+        card_layout.addWidget(title_label)
+
+        value_label = QLabel("0")
+        value_label.setObjectName(f"dashboard_value_{kind}")
+        card_layout.addWidget(value_label)
+
+        detail_label = QLabel("")
+        detail_label.setObjectName("dashboard_card_detail")
+        card_layout.addWidget(detail_label)
+
+        card._value_label = value_label
+        card._detail_label = detail_label
+        return card
 
     def create_stat_card(self, title, value, kind):
         card = QFrame()
@@ -276,26 +353,126 @@ class MainWindow(QMainWindow):
         card._title_label = title_label
         return card
 
-    def refresh_dashboard(self):
-        today = date.today()
-        start = f"{today.year:04d}-{today.month:02d}-01"
-        if today.month == 12:
-            end = f"{today.year+1:04d}-01-01"
-        else:
-            end = f"{today.year:04d}-{today.month+1:02d}-01"
+    def refresh_dashboard(self, *args):
+        year = self.dash_period.year()
+        month = self.dash_period.month()
+        selected_month = QDate(year, month, 1)
+        next_month = selected_month.addMonths(1)
+        previous_month = selected_month.addMonths(-1)
+        start = selected_month.toString("yyyy-MM-dd")
+        end = next_month.toString("yyyy-MM-dd")
 
         summary = self.db.get_summary(start, end)
-        transactions = self.db.get_transactions(start_date=start, end_date=end)
+        previous = self.db.get_monthly_summary(
+            previous_month.year(), previous_month.month()
+        )
+        transactions = self.db.get_transactions(
+            start_date=start, end_date=next_month.addDays(-1).toString("yyyy-MM-dd")
+        )
 
         self.income_card._value_label.setText(f"¥ {summary['total_income']:,.2f}")
         self.expense_card._value_label.setText(f"¥ {summary['total_expense']:,.2f}")
         self.balance_card._value_label.setText(f"¥ {summary['balance']:,.2f}")
-        self.count_card._value_label.setText(f"{len(transactions)}")
+        self.count_card._value_label.setText(f"{len(transactions)} 笔")
+        self.income_card._detail_label.setText(
+            self._comparison_text(summary['total_income'], previous['total_income'])
+        )
+        self.expense_card._detail_label.setText(
+            self._comparison_text(summary['total_expense'], previous['total_expense'])
+        )
+        income = summary['total_income']
+        balance_rate = summary['balance'] / income * 100 if income else 0
+        self.balance_card._detail_label.setText(f"结余率 {balance_rate:.1f}%")
+        days = max(1, next_month.addDays(-1).day())
+        self.count_card._detail_label.setText(f"日均 {len(transactions) / days:.1f} 笔")
 
-        recent = self.db.get_transactions()[:10]
+        self._refresh_dashboard_chart(selected_month)
+        self._refresh_dashboard_categories(start, end)
+
+        recent = self.db.get_transactions()[:5]
         self.dash_table.setRowCount(len(recent))
         for row, t in enumerate(recent):
             self._fill_table_row(self.dash_table, row, t)
+
+    def _comparison_text(self, current, previous):
+        if previous == 0:
+            return "较上月 --" if current == 0 else "较上月 新增"
+        change = (current - previous) / previous * 100
+        arrow = "↑" if change >= 0 else "↓"
+        return f"较上月 {arrow} {abs(change):.1f}%"
+
+    def _refresh_dashboard_chart(self, selected_month):
+        income_set = QBarSet("收入")
+        expense_set = QBarSet("支出")
+        income_set.setColor(QColor("#52c41a"))
+        expense_set.setColor(QColor("#ff7875"))
+        labels = []
+        maximum = 0
+        for offset in range(-5, 1):
+            month_date = selected_month.addMonths(offset)
+            summary = self.db.get_monthly_summary(month_date.year(), month_date.month())
+            income_set.append(summary['total_income'])
+            expense_set.append(summary['total_expense'])
+            maximum = max(
+                maximum, summary['total_income'], summary['total_expense']
+            )
+            labels.append(f"{month_date.month()}月")
+
+        series = QBarSeries()
+        series.append(income_set)
+        series.append(expense_set)
+        self.dash_chart.removeAllSeries()
+        for axis in self.dash_chart.axes():
+            self.dash_chart.removeAxis(axis)
+        self.dash_chart.addSeries(series)
+
+        category_axis = QBarCategoryAxis()
+        category_axis.append(labels)
+        value_axis = QValueAxis()
+        value_axis.setLabelFormat("%.0f")
+        value_axis.setRange(0, maximum * 1.15 if maximum else 100)
+        value_axis.setTickCount(5)
+        self.dash_chart.addAxis(category_axis, Qt.AlignBottom)
+        self.dash_chart.addAxis(value_axis, Qt.AlignLeft)
+        series.attachAxis(category_axis)
+        series.attachAxis(value_axis)
+
+    def _refresh_dashboard_categories(self, start, end):
+        while self.dash_category_layout.count():
+            item = self.dash_category_layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+
+        categories = self.db.get_category_summary(start, end, 'expense')[:4]
+        total = sum(item['total'] for item in categories)
+        if not categories:
+            empty = QLabel("本月暂无支出")
+            empty.setObjectName("dashboard_empty")
+            empty.setAlignment(Qt.AlignCenter)
+            self.dash_category_layout.addWidget(empty)
+            return
+
+        for category in categories:
+            row = QWidget()
+            row_layout = QVBoxLayout(row)
+            row_layout.setContentsMargins(0, 2, 0, 2)
+            row_layout.setSpacing(4)
+            info_layout = QHBoxLayout()
+            name = QLabel(f"{category['icon']} {category['name']}")
+            name.setObjectName("dashboard_category_name")
+            info_layout.addWidget(name)
+            info_layout.addStretch()
+            amount = QLabel(f"¥ {category['total']:,.2f}")
+            amount.setObjectName("dashboard_category_amount")
+            info_layout.addWidget(amount)
+            row_layout.addLayout(info_layout)
+            progress = QProgressBar()
+            progress.setRange(0, 100)
+            progress.setValue(int(category['total'] / total * 100) if total else 0)
+            progress.setTextVisible(False)
+            progress.setObjectName("dashboard_category_progress")
+            row_layout.addWidget(progress)
+            self.dash_category_layout.addWidget(row)
 
     def _fill_table_row(self, table, row, t):
         date_item = QTableWidgetItem(t['date'])

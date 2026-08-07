@@ -25,7 +25,7 @@ class Database:
         self._init_default_categories()
 
     def _init_default_categories(self):
-        self.cursor.execute("SELECT COUNT(*) FROM categories")
+        self.cursor.execute("SELECT COUNT(*) FROM my_categories")
         if self.cursor.fetchone()[0] == 0:
             default_categories = [
                 ('餐饮', 'expense', '🍔'),
@@ -42,7 +42,7 @@ class Database:
                 ('其他收入', 'income', '💎'),
             ]
             self.cursor.executemany(
-                "INSERT INTO categories (name, type, icon) VALUES (?, ?, ?)",
+                "INSERT INTO my_categories (name, type, icon) VALUES (?, ?, ?)",
                 default_categories
             )
             self.conn.commit()
@@ -50,28 +50,28 @@ class Database:
     def get_categories(self, type: Optional[str] = None) -> List[Dict]:
         if type:
             self.cursor.execute(
-                "SELECT * FROM categories WHERE type = ? ORDER BY id", (type,)
+                "SELECT * FROM my_categories WHERE type = ? ORDER BY id", (type,)
             )
         else:
-            self.cursor.execute("SELECT * FROM categories ORDER BY id")
+            self.cursor.execute("SELECT * FROM my_categories ORDER BY id")
         return [dict(row) for row in self.cursor.fetchall()]
 
     def add_category(self, name: str, type: str, icon: str = '📁') -> int:
         self.cursor.execute(
-            "INSERT INTO categories (name, type, icon) VALUES (?, ?, ?)",
+            "INSERT INTO my_categories (name, type, icon) VALUES (?, ?, ?)",
             (name, type, icon)
         )
         self.conn.commit()
         return self.cursor.lastrowid
 
     def delete_category(self, category_id: int):
-        self.cursor.execute("DELETE FROM categories WHERE id = ?", (category_id,))
+        self.cursor.execute("DELETE FROM my_categories WHERE id = ?", (category_id,))
         self.conn.commit()
 
     def add_transaction(self, type: str, amount: float, category_id: int,
                        note: str, date: str) -> int:
         self.cursor.execute(
-            """INSERT INTO transactions (type, amount, category_id, note, date)
+            """INSERT INTO my_transactions (type, amount, category_id, note, date)
                VALUES (?, ?, ?, ?, ?)""",
             (type, amount, category_id, note, date)
         )
@@ -81,14 +81,14 @@ class Database:
     def update_transaction(self, id: int, type: str, amount: float,
                           category_id: int, note: str, date: str):
         self.cursor.execute(
-            """UPDATE transactions SET type=?, amount=?, category_id=?, note=?, date=?
+            """UPDATE my_transactions SET type=?, amount=?, category_id=?, note=?, date=?
                WHERE id=?""",
             (type, amount, category_id, note, date, id)
         )
         self.conn.commit()
 
     def delete_transaction(self, id: int):
-        self.cursor.execute("DELETE FROM transactions WHERE id = ?", (id,))
+        self.cursor.execute("DELETE FROM my_transactions WHERE id = ?", (id,))
         self.conn.commit()
 
     def get_transactions(self, start_date: Optional[str] = None,
@@ -97,8 +97,8 @@ class Database:
                         category_id: Optional[int] = None) -> List[Dict]:
         query = """
             SELECT t.*, c.name as category_name, c.icon as category_icon
-            FROM transactions t
-            LEFT JOIN categories c ON t.category_id = c.id
+            FROM my_transactions t
+            LEFT JOIN my_categories c ON t.category_id = c.id
             WHERE 1=1
         """
         params = []
@@ -125,7 +125,7 @@ class Database:
             """SELECT
                 COALESCE(SUM(CASE WHEN type='income' THEN amount ELSE 0 END), 0) as total_income,
                 COALESCE(SUM(CASE WHEN type='expense' THEN amount ELSE 0 END), 0) as total_expense
-            FROM transactions
+            FROM my_transactions
             WHERE date >= ? AND date <= ?""",
             (start_date, end_date)
         )
@@ -144,7 +144,7 @@ class Database:
             """SELECT
                 COALESCE(SUM(CASE WHEN type='income' THEN amount ELSE 0 END), 0) as total_income,
                 COALESCE(SUM(CASE WHEN type='expense' THEN amount ELSE 0 END), 0) as total_expense
-            FROM transactions
+            FROM my_transactions
             WHERE date >= ? AND date < ?""",
             (start_date, end_date)
         )
@@ -155,8 +155,8 @@ class Database:
     def get_category_summary(self, start_date: str, end_date: str, type: str = 'expense') -> List[Dict]:
         self.cursor.execute(
             """SELECT c.name, c.icon, SUM(t.amount) as total
-            FROM transactions t
-            LEFT JOIN categories c ON t.category_id = c.id
+            FROM my_transactions t
+            LEFT JOIN my_categories c ON t.category_id = c.id
             WHERE t.date >= ? AND t.date <= ? AND t.type = ?
             GROUP BY t.category_id
             ORDER BY total DESC""",

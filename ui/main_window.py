@@ -603,7 +603,6 @@ class MainWindow(QMainWindow):
 
             amount_label = QLabel(f"¥ {cat['total']:,.2f}")
             amount_label.setFont(QFont("", 14, QFont.Bold))
-            amount_label.setForegroundRole(self.palette().Window)
             if tx_type == 'income':
                 amount_label.setStyleSheet("color: #52c41a;")
             else:

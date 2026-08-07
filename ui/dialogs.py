@@ -1,11 +1,11 @@
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
     QComboBox, QPushButton, QGridLayout, QWidget, QFrame,
-    QDoubleSpinBox, QButtonGroup, QMessageBox, QDateEdit
+    QDoubleSpinBox, QButtonGroup, QMessageBox
 )
 from PySide6.QtCore import Qt, QDate
 from PySide6.QtGui import QFont
-from datetime import date
+from ui.date_range_picker import DatePicker
 
 
 class TransactionDialog(QDialog):
@@ -67,10 +67,8 @@ class TransactionDialog(QDialog):
         form_layout.addWidget(self.category_combo, 1, 1)
 
         form_layout.addWidget(self.make_label("日期"), 2, 0)
-        self.date_input = QDateEdit()
-        self.date_input.setCalendarPopup(True)
-        self.date_input.setDate(QDate.currentDate())
-        self.date_input.setDisplayFormat("yyyy-MM-dd")
+        self.date_input = DatePicker(QDate.currentDate())
+        self.date_input.setFixedHeight(38)
         form_layout.addWidget(self.date_input, 2, 1)
 
         form_layout.addWidget(self.make_label("备注"), 3, 0)

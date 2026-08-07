@@ -4,12 +4,12 @@ from PySide6.QtWidgets import (
     QTableWidget, QTableWidgetItem, QHeaderView,
     QComboBox, QMessageBox, QGridLayout,
     QScrollArea, QSizePolicy, QButtonGroup, QProgressBar,
-    QLineEdit, QAbstractItemView, QMenu, QDialog
+    QLineEdit, QAbstractItemView, QMenu, QDialog, QToolTip
 )
-from PySide6.QtCore import Qt, QDate
-from PySide6.QtGui import QFont, QColor, QIcon, QPainter
+from PySide6.QtCore import Qt, QDate, QPointF
+from PySide6.QtGui import QFont, QColor, QIcon, QPainter, QCursor, QPen
 from PySide6.QtCharts import (
-    QBarCategoryAxis, QBarSeries, QBarSet, QChart, QChartView, QValueAxis
+    QCategoryAxis, QChart, QChartView, QLineSeries, QScatterSeries, QValueAxis
 )
 from ui.dialogs import TransactionDialog
 from ui.account_dialog import AccountFormDialog
@@ -402,40 +402,99 @@ class MainWindow(QMainWindow):
         return f"较上月 {arrow} {abs(change):.1f}%"
 
     def _refresh_dashboard_chart(self, selected_month):
-        income_set = QBarSet("收入")
-        expense_set = QBarSet("支出")
-        income_set.setColor(QColor("#52c41a"))
-        expense_set.setColor(QColor("#ff7875"))
         labels = []
+        income_values = []
+        expense_values = []
         maximum = 0
         for offset in range(-5, 1):
             month_date = selected_month.addMonths(offset)
             summary = self.db.get_monthly_summary(month_date.year(), month_date.month())
-            income_set.append(summary['total_income'])
-            expense_set.append(summary['total_expense'])
+            income_values.append(summary['total_income'])
+            expense_values.append(summary['total_expense'])
             maximum = max(
                 maximum, summary['total_income'], summary['total_expense']
             )
             labels.append(f"{month_date.month()}月")
 
-        series = QBarSeries()
-        series.append(income_set)
-        series.append(expense_set)
+        if maximum >= 10000:
+            divisor, suffix = 10000, "万"
+        elif maximum >= 1000:
+            divisor, suffix = 1000, "k"
+        else:
+            divisor, suffix = 1, ""
+
         self.dash_chart.removeAllSeries()
         for axis in self.dash_chart.axes():
             self.dash_chart.removeAxis(axis)
-        self.dash_chart.addSeries(series)
 
-        category_axis = QBarCategoryAxis()
-        category_axis.append(labels)
+        income_line = QLineSeries()
+        expense_line = QLineSeries()
+        income_line.setName("收入")
+        expense_line.setName("支出")
+        income_line.setColor(QColor("#52c41a"))
+        expense_line.setColor(QColor("#f5222d"))
+        income_line.setPen(QPen(QColor("#52c41a"), 2.5))
+        expense_line.setPen(QPen(QColor("#f5222d"), 2.5))
+        income_line.setPointsVisible(True)
+        expense_line.setPointsVisible(True)
+        income_line.setMarkerSize(7)
+        expense_line.setMarkerSize(7)
+
+        for index, (income, expense) in enumerate(zip(income_values, expense_values)):
+            income_point = QPointF(index, income / divisor)
+            expense_point = QPointF(index, expense / divisor)
+            income_line.append(income_point)
+            expense_line.append(expense_point)
+
+        income_current = QScatterSeries()
+        expense_current = QScatterSeries()
+        income_current.append(5, income_values[-1] / divisor)
+        expense_current.append(5, expense_values[-1] / divisor)
+        income_current.setColor(QColor("#52c41a"))
+        expense_current.setColor(QColor("#f5222d"))
+        income_current.setBorderColor(QColor("#ffffff"))
+        expense_current.setBorderColor(QColor("#ffffff"))
+        income_current.setMarkerSize(12)
+        expense_current.setMarkerSize(12)
+
+        chart_series = (income_line, expense_line, income_current, expense_current)
+        for series in chart_series:
+            self.dash_chart.addSeries(series)
+
+        category_axis = QCategoryAxis()
+        for index, label in enumerate(labels):
+            category_axis.append(label, index)
+        category_axis.setRange(0, 5)
+        category_axis.setLabelsPosition(QCategoryAxis.AxisLabelsPositionOnValue)
         value_axis = QValueAxis()
-        value_axis.setLabelFormat("%.0f")
-        value_axis.setRange(0, maximum * 1.15 if maximum else 100)
+        value_axis.setLabelFormat(f"%.1f{suffix}" if suffix else "%.0f")
+        scaled_maximum = maximum / divisor
+        value_axis.setRange(0, scaled_maximum * 1.15 if maximum else 100)
         value_axis.setTickCount(5)
         self.dash_chart.addAxis(category_axis, Qt.AlignBottom)
         self.dash_chart.addAxis(value_axis, Qt.AlignLeft)
-        series.attachAxis(category_axis)
-        series.attachAxis(value_axis)
+        for series in chart_series:
+            series.attachAxis(category_axis)
+            series.attachAxis(value_axis)
+
+        for series in (income_current, expense_current):
+            for marker in self.dash_chart.legend().markers(series):
+                marker.setVisible(False)
+
+        income_line.hovered.connect(
+            lambda point, state: self._show_chart_tooltip("收入", point, state, divisor)
+        )
+        expense_line.hovered.connect(
+            lambda point, state: self._show_chart_tooltip("支出", point, state, divisor)
+        )
+
+    def _show_chart_tooltip(self, name, point, state, divisor):
+        if state:
+            QToolTip.showText(
+                QCursor.pos(), f"{name}：¥ {point.y() * divisor:,.2f}", self.dash_chart_view
+            )
+        else:
+            QToolTip.hideText()
 
     def _refresh_dashboard_categories(self, start, end):
         while self.dash_category_layout.count():

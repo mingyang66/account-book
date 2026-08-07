@@ -1,11 +1,12 @@
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
     QComboBox, QPushButton, QGridLayout, QWidget, QFrame,
-    QDoubleSpinBox, QButtonGroup, QMessageBox
+    QButtonGroup, QMessageBox
 )
 from PySide6.QtCore import Qt, QDate
 from PySide6.QtGui import QFont
 from ui.date_range_picker import DatePicker
+from ui.amount_input import AmountInput
 
 
 class TransactionDialog(QDialog):
@@ -53,14 +54,38 @@ class TransactionDialog(QDialog):
 
         form_layout = QGridLayout()
         form_layout.setSpacing(12)
+        form_layout.setColumnStretch(1, 1)
 
         form_layout.addWidget(self.make_label("金额"), 0, 0)
-        self.amount_input = QDoubleSpinBox()
-        self.amount_input.setRange(0.01, 99999999.99)
-        self.amount_input.setDecimals(2)
-        self.amount_input.setPrefix("¥ ")
-        self.amount_input.setFont(QFont("", 14))
-        form_layout.addWidget(self.amount_input, 0, 1)
+        amount_panel = QWidget()
+        amount_layout = QVBoxLayout(amount_panel)
+        amount_layout.setContentsMargins(0, 0, 0, 0)
+        amount_layout.setSpacing(7)
+        self.amount_input = AmountInput()
+        self.amount_input.setFixedHeight(54)
+        amount_layout.addWidget(self.amount_input)
+
+        shortcuts = QHBoxLayout()
+        shortcuts.setSpacing(7)
+        for amount in (10, 20, 50, 100):
+            button = QPushButton(f"+{amount}")
+            button.setObjectName("amountShortcut")
+            button.setCursor(Qt.PointingHandCursor)
+            button.clicked.connect(
+                lambda checked, value=amount: self.amount_input.add_value(value)
+            )
+            shortcuts.addWidget(button)
+        shortcuts.addStretch()
+        amount_layout.addLayout(shortcuts)
+
+        self.amount_error = QLabel("请输入大于 0 的有效金额")
+        self.amount_error.setObjectName("amountError")
+        self.amount_error.hide()
+        amount_layout.addWidget(self.amount_error)
+        self.amount_input.valueChanged.connect(
+            lambda value: self.amount_error.hide() if value > 0 else None
+        )
+        form_layout.addWidget(amount_panel, 0, 1)
 
         form_layout.addWidget(self.make_label("分类"), 1, 0)
         self.category_combo = QComboBox()
@@ -164,8 +189,11 @@ class TransactionDialog(QDialog):
 
     def on_save(self):
         if self.amount_input.value() <= 0:
-            QMessageBox.warning(self, "提示", "请输入有效金额")
+            self.amount_input.set_error(True)
+            self.amount_error.show()
+            self.amount_input.focus_input()
             return
+        self.amount_error.hide()
         self.accept()
 
     def get_data(self):

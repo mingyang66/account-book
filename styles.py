@@ -420,6 +420,61 @@ QComboBox, QDateEdit, QLineEdit, QSpinBox {
     color: #1a1a1a;
 }
 
+QWidget#amountInput {
+    background-color: #ffffff;
+    border: 1px solid #d9d9d9;
+    border-radius: 9px;
+}
+
+QWidget#amountInput[focused="true"] {
+    border: 2px solid #1890ff;
+}
+
+QWidget#amountInput[error="true"] {
+    border: 2px solid #ff4d4f;
+    background-color: #fffafa;
+}
+
+QLabel#amountCurrency {
+    color: #8c8c8c;
+    font-size: 22px;
+    font-weight: bold;
+}
+
+QLineEdit#amountEditor {
+    background-color: transparent;
+    border: none;
+    padding: 0;
+    min-height: 44px;
+    color: #1a1a1a;
+    font-size: 25px;
+    font-weight: bold;
+}
+
+QPushButton#amountShortcut {
+    background-color: #f7f9fc;
+    color: #595959;
+    border: 1px solid #e8e8e8;
+    border-radius: 6px;
+    padding: 5px 11px;
+    font-size: 12px;
+}
+
+QPushButton#amountShortcut:hover {
+    background-color: #e6f7ff;
+    border-color: #91d5ff;
+    color: #1890ff;
+}
+
+QPushButton#amountShortcut:pressed {
+    background-color: #bae7ff;
+}
+
+QLabel#amountError {
+    color: #ff4d4f;
+    font-size: 12px;
+}
+
 QComboBox:focus, QDateEdit:focus, QLineEdit:focus, QSpinBox:focus {
     border-color: #1890ff;
 }

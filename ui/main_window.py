@@ -2,7 +2,7 @@ from PySide6.QtWidgets import (
     QMainWindow, QWidget, QHBoxLayout, QVBoxLayout,
     QLabel, QPushButton, QStackedWidget, QFrame,
     QTableWidget, QTableWidgetItem, QHeaderView,
-    QComboBox, QDateEdit, QMessageBox, QGridLayout,
+    QComboBox, QMessageBox, QGridLayout,
     QScrollArea, QSizePolicy, QButtonGroup, QProgressBar,
     QLineEdit, QAbstractItemView, QMenu, QDialog
 )
@@ -10,6 +10,7 @@ from PySide6.QtCore import Qt, QDate
 from PySide6.QtGui import QFont, QColor, QIcon
 from ui.dialogs import TransactionDialog
 from ui.account_dialog import AccountFormDialog
+from ui.date_range_picker import DateRangePicker
 from datetime import date, datetime
 
 
@@ -327,29 +328,15 @@ class MainWindow(QMainWindow):
         filter_layout.setContentsMargins(16, 12, 16, 12)
         filter_layout.setSpacing(8)
 
-        start_label = QLabel("从")
-        start_label.setObjectName("filter_label")
-        self.tx_start_date = QDateEdit()
-        self.tx_start_date.setCalendarPopup(True)
-        self.tx_start_date.setDisplayFormat("yyyy-MM-dd")
-        self.tx_start_date.setDate(QDate.currentDate().addMonths(-1))
-        self.tx_start_date.setMinimumWidth(100)
-        self.tx_start_date.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        self.tx_start_date.setFixedHeight(38)
-        filter_layout.addWidget(start_label)
-        filter_layout.addWidget(self.tx_start_date, 2)
-
-        end_label = QLabel("到")
-        end_label.setObjectName("filter_label")
-        self.tx_end_date = QDateEdit()
-        self.tx_end_date.setCalendarPopup(True)
-        self.tx_end_date.setDisplayFormat("yyyy-MM-dd")
-        self.tx_end_date.setDate(QDate.currentDate())
-        self.tx_end_date.setMinimumWidth(100)
-        self.tx_end_date.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        self.tx_end_date.setFixedHeight(38)
-        filter_layout.addWidget(end_label)
-        filter_layout.addWidget(self.tx_end_date, 2)
+        date_label = QLabel("日期")
+        date_label.setObjectName("filter_label")
+        filter_layout.addWidget(date_label)
+        self.tx_date_range = DateRangePicker(
+            QDate.currentDate().addMonths(-1), QDate.currentDate()
+        )
+        self.tx_date_range.setMinimumWidth(235)
+        self.tx_date_range.setFixedHeight(38)
+        filter_layout.addWidget(self.tx_date_range, 4)
 
         type_label = QLabel("类型")
         type_label.setObjectName("filter_label")
@@ -412,8 +399,8 @@ class MainWindow(QMainWindow):
         return page
 
     def refresh_transactions(self):
-        start = self.tx_start_date.date().toString("yyyy-MM-dd")
-        end = self.tx_end_date.date().toString("yyyy-MM-dd")
+        start = self.tx_date_range.start_date().toString("yyyy-MM-dd")
+        end = self.tx_date_range.end_date().toString("yyyy-MM-dd")
         type_idx = self.tx_type_filter.currentIndex()
         type_map = {0: None, 1: 'income', 2: 'expense'}
         tx_type = type_map[type_idx]

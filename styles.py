@@ -135,6 +135,26 @@ QFrame#filterBar QDateEdit, QFrame#filterBar QComboBox {
     max-height: 36px;
 }
 
+QPushButton#dateRangePicker {
+    background-color: #ffffff;
+    color: #1a1a1a;
+    border: 1px solid #d9d9d9;
+    border-radius: 6px;
+    padding: 0 12px;
+    text-align: left;
+    font-size: 13px;
+}
+
+QPushButton#dateRangePicker:hover {
+    background-color: #fafdff;
+    border-color: #40a9ff;
+    color: #1890ff;
+}
+
+QPushButton#dateRangePicker:pressed {
+    background-color: #e6f7ff;
+}
+
 QLabel#filter_label {
     color: #8c8c8c;
     font-size: 13px;

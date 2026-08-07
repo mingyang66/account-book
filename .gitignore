@@ -25,3 +25,5 @@ Thumbs.db
 # Logs
 *.log
 err.log
+
+account_book.db

@@ -1,3 +1,4 @@
+import os
 import sqlite3
 from datetime import datetime, date
 from typing import List, Dict, Optional
@@ -11,27 +12,15 @@ class Database:
         self.cursor = self.conn.cursor()
         self._create_tables()
 
-    def _create_tables(self):
-        self.cursor.executescript("""
-            CREATE TABLE IF NOT EXISTS categories (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL,
-                type TEXT NOT NULL CHECK(type IN ('income', 'expense')),
-                icon TEXT DEFAULT '📁',
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
+    def _get_sql_path(self, filename: str) -> str:
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        return os.path.join(base_dir, 'sql', filename)
 
-            CREATE TABLE IF NOT EXISTS transactions (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                type TEXT NOT NULL CHECK(type IN ('income', 'expense')),
-                amount REAL NOT NULL,
-                category_id INTEGER,
-                note TEXT,
-                date DATE NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (category_id) REFERENCES categories(id)
-            );
-        """)
+    def _create_tables(self):
+        init_sql_path = self._get_sql_path('init.sql')
+        with open(init_sql_path, 'r', encoding='utf-8') as f:
+            sql = f.read()
+        self.cursor.executescript(sql)
         self.conn.commit()
         self._init_default_categories()
 

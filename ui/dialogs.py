@@ -67,7 +67,9 @@ class TransactionDialog(QDialog):
         form_layout.addWidget(self.category_combo, 1, 1)
 
         form_layout.addWidget(self.make_label("日期"), 2, 0)
-        self.date_input = DatePicker(QDate.currentDate())
+        self.date_input = DatePicker(
+            QDate.currentDate(), maximum_date=QDate.currentDate()
+        )
         self.date_input.setFixedHeight(38)
         form_layout.addWidget(self.date_input, 2, 1)
 

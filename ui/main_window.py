@@ -466,7 +466,13 @@ class MainWindow(QMainWindow):
         dialog = TransactionDialog(self.db, parent=self)
         if dialog.exec() == TransactionDialog.Accepted:
             data = dialog.get_data()
-            self.db.add_transaction(**data)
+            try:
+                self.db.add_transaction(**data)
+            except Exception as error:
+                QMessageBox.critical(self, "新增失败", f"记录保存失败：{error}")
+                return
+            transaction_date = QDate.fromString(data['date'], "yyyy-MM-dd")
+            self.tx_date_range.include_date(transaction_date)
             self.refresh_transactions()
             self.refresh_dashboard()
 

@@ -348,6 +348,13 @@ class DateRangePicker(QPushButton):
     def end_date(self):
         return self._end_date
 
+    def include_date(self, selected_date):
+        if selected_date < self._start_date:
+            self._start_date = selected_date
+        if selected_date > self._end_date:
+            self._end_date = selected_date
+        self._update_text()
+
     def _update_text(self):
         start = self._start_date.toString("yyyy-MM-dd")
         end = self._end_date.toString("yyyy-MM-dd")
@@ -355,8 +362,9 @@ class DateRangePicker(QPushButton):
 
 
 class DatePickerDialog(QDialog):
-    def __init__(self, selected_date, parent=None):
+    def __init__(self, selected_date, maximum_date=None, parent=None):
         super().__init__(parent)
+        self.maximum_date = maximum_date
         self.setObjectName("dateRangeDialog")
         self.setWindowTitle("选择日期")
         self.setFixedSize(380, 400)
@@ -379,6 +387,8 @@ class DatePickerDialog(QDialog):
         layout.addLayout(title_row)
 
         self.calendar = create_calendar(selected_date)
+        if self.maximum_date:
+            self.calendar.setMaximumDate(self.maximum_date)
         layout.addWidget(self.calendar, 1)
 
         actions = QHBoxLayout()
@@ -403,9 +413,10 @@ class DatePickerDialog(QDialog):
 
 
 class DatePicker(QPushButton):
-    def __init__(self, selected_date=None, parent=None):
+    def __init__(self, selected_date=None, maximum_date=None, parent=None):
         super().__init__(parent)
-        self._date = selected_date or QDate.currentDate()
+        self._maximum_date = maximum_date
+        self._date = self._bounded_date(selected_date or QDate.currentDate())
         self.setObjectName("dateRangePicker")
         self.setCursor(Qt.PointingHandCursor)
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
@@ -413,17 +424,22 @@ class DatePicker(QPushButton):
         self._update_text()
 
     def open_picker(self):
-        dialog = DatePickerDialog(self._date, self)
+        dialog = DatePickerDialog(self._date, self._maximum_date, self)
         if dialog.exec() == QDialog.Accepted:
             self.setDate(dialog.selected_date())
 
     def setDate(self, selected_date):
         if selected_date.isValid():
-            self._date = selected_date
+            self._date = self._bounded_date(selected_date)
             self._update_text()
 
     def date(self):
         return self._date
+
+    def _bounded_date(self, selected_date):
+        if self._maximum_date and selected_date > self._maximum_date:
+            return self._maximum_date
+        return selected_date
 
     def _update_text(self):
         self.setText(f"📅  {self._date.toString('yyyy-MM-dd')}")

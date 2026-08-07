@@ -22,7 +22,86 @@ class Database:
             sql = f.read()
         self.cursor.executescript(sql)
         self.conn.commit()
+        self._init_default_account()
         self._init_default_categories()
+
+    def _init_default_account(self):
+        self.cursor.execute("SELECT COUNT(*) FROM my_account")
+        if self.cursor.fetchone()[0] == 0:
+            self.cursor.execute(
+                "INSERT INTO my_account (username, password) VALUES (?, ?)",
+                ('admin', '123456')
+            )
+            self.conn.commit()
+
+    def verify_account(self, username: str, password: str) -> bool:
+        self.cursor.execute(
+            "SELECT COUNT(*) FROM my_account WHERE username = ? AND password = ?",
+            (username, password)
+        )
+        return self.cursor.fetchone()[0] > 0
+
+    def change_password(self, username: str, old_password: str, new_password: str) -> tuple[bool, str]:
+        if not self.verify_account(username, old_password):
+            return False, "原密码错误"
+        if not new_password or len(new_password) < 6:
+            return False, "新密码不能少于6位"
+        self.cursor.execute(
+            "UPDATE my_account SET password = ?, updateTime = CURRENT_TIMESTAMP WHERE username = ?",
+            (new_password, username)
+        )
+        self.conn.commit()
+        return True, "密码修改成功"
+
+    def get_accounts(self) -> List[Dict]:
+        self.cursor.execute("SELECT * FROM my_account ORDER BY createTime DESC")
+        return [dict(row) for row in self.cursor.fetchall()]
+
+    def add_account(self, username: str, password: str) -> tuple[bool, str]:
+        if not username:
+            return False, "用户名不能为空"
+        if not password or len(password) < 6:
+            return False, "密码不能少于6位"
+        self.cursor.execute("SELECT COUNT(*) FROM my_account WHERE username = ?", (username,))
+        if self.cursor.fetchone()[0] > 0:
+            return False, "用户名已存在"
+        self.cursor.execute(
+            "INSERT INTO my_account (username, password) VALUES (?, ?)",
+            (username, password)
+        )
+        self.conn.commit()
+        return True, "添加成功"
+
+    def update_account(self, id: int, username: str, password: str) -> tuple[bool, str]:
+        if not username:
+            return False, "用户名不能为空"
+        if not password or len(password) < 6:
+            return False, "密码不能少于6位"
+        self.cursor.execute(
+            "SELECT COUNT(*) FROM my_account WHERE username = ? AND id != ?",
+            (username, id)
+        )
+        if self.cursor.fetchone()[0] > 0:
+            return False, "用户名已存在"
+        self.cursor.execute(
+            "UPDATE my_account SET username = ?, password = ?, updateTime = CURRENT_TIMESTAMP WHERE id = ?",
+            (username, password, id)
+        )
+        self.conn.commit()
+        return True, "修改成功"
+
+    def delete_account(self, id: int) -> tuple[bool, str]:
+        self.cursor.execute("SELECT username FROM my_account WHERE id = ?", (id,))
+        row = self.cursor.fetchone()
+        if row is None:
+            return False, "账号不存在"
+        if row[0] == 'admin':
+            return False, "admin 账号不可删除"
+        self.cursor.execute(
+            "DELETE FROM my_account WHERE id = ?", (id,)
+        )
+        self.conn.commit()
+        return True, "删除成功"
 
     def _init_default_categories(self):
         self.cursor.execute("SELECT COUNT(*) FROM my_categories")
@@ -81,7 +160,7 @@ class Database:
     def update_transaction(self, id: int, type: str, amount: float,
                           category_id: int, note: str, date: str):
         self.cursor.execute(
-            """UPDATE my_transactions SET type=?, amount=?, category_id=?, note=?, date=?
+            """UPDATE my_transactions SET type=?, amount=?, category_id=?, note=?, date=?, updateTime=CURRENT_TIMESTAMP
                WHERE id=?""",
             (type, amount, category_id, note, date, id)
         )
@@ -116,7 +195,7 @@ class Database:
             query += " AND t.category_id = ?"
             params.append(category_id)
 
-        query += " ORDER BY t.date DESC, t.created_at DESC"
+        query += " ORDER BY t.date DESC, t.createTime DESC"
         self.cursor.execute(query, params)
         return [dict(row) for row in self.cursor.fetchall()]
 

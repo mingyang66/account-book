@@ -4,19 +4,21 @@ from PySide6.QtWidgets import (
     QTableWidget, QTableWidgetItem, QHeaderView,
     QComboBox, QDateEdit, QMessageBox, QGridLayout,
     QScrollArea, QSizePolicy, QButtonGroup, QProgressBar,
-    QLineEdit, QAbstractItemView
+    QLineEdit, QAbstractItemView, QMenu, QDialog
 )
 from PySide6.QtCore import Qt, QDate
 from PySide6.QtGui import QFont, QColor, QIcon
-from database import Database
 from ui.dialogs import TransactionDialog
+from ui.account_dialog import AccountFormDialog
 from datetime import date, datetime
 
 
 class MainWindow(QMainWindow):
-    def __init__(self):
+    def __init__(self, db, username):
         super().__init__()
-        self.db = Database()
+        self.db = db
+        self.username = username
+        self._logged_out = False
         self.setWindowTitle("记账本 - 个人财务管理")
         self.setMinimumSize(1000, 650)
         self.resize(1100, 700)
@@ -48,8 +50,10 @@ class MainWindow(QMainWindow):
             self.create_transactions_page(),
             self.create_statistics_page(),
         ]
+        self.account_page = self.create_account_page()
         for page in self.pages:
             self.stacked.addWidget(page)
+        self.stacked.addWidget(self.account_page)
         content_layout.addWidget(self.stacked)
 
         content_widget = QWidget()
@@ -104,10 +108,74 @@ class MainWindow(QMainWindow):
         layout.addStretch()
 
         today_label = QLabel(date.today().strftime("%Y年%m月%d日"))
-        today_label.setStyleSheet("color: #8c8c8c; font-size: 13px;")
+        today_label.setStyleSheet("color: #8c8c8c; font-size: 13px; margin-right: 16px;")
         layout.addWidget(today_label)
 
+        separator = QFrame()
+        separator.setFrameShape(QFrame.VLine)
+        separator.setFixedHeight(24)
+        separator.setStyleSheet("color: #d9d9d9;")
+        layout.addWidget(separator)
+
+        self.account_btn = QPushButton(f"👤 {self.username}")
+        self.account_btn.setCursor(Qt.PointingHandCursor)
+        self.account_btn.setStyleSheet("""
+            QPushButton {
+                background-color: transparent;
+                color: #1a1a1a;
+                font-size: 14px;
+                border: 1px solid #d9d9d9;
+                border-radius: 6px;
+                padding: 6px 16px;
+                margin-left: 8px;
+            }
+            QPushButton:hover {
+                background-color: #f5f5f5;
+                border-color: #1890ff;
+                color: #1890ff;
+            }
+        """)
+        self.account_btn.clicked.connect(self.on_account_btn_click)
+        layout.addWidget(self.account_btn)
+
+        logout_btn = QPushButton("退出登录")
+        logout_btn.setCursor(Qt.PointingHandCursor)
+        logout_btn.setStyleSheet("""
+            QPushButton {
+                background-color: transparent;
+                color: #8c8c8c;
+                font-size: 13px;
+                border: 1px solid #d9d9d9;
+                border-radius: 6px;
+                padding: 6px 12px;
+                margin-left: 8px;
+            }
+            QPushButton:hover {
+                background-color: #fff1f0;
+                border-color: #ff4d4f;
+                color: #ff4d4f;
+            }
+        """)
+        logout_btn.clicked.connect(self.on_logout)
+        layout.addWidget(logout_btn)
+
         return header
+
+    def on_account_btn_click(self):
+        self.stacked.setCurrentIndex(3)
+        self.refresh_accounts()
+        for btn in self.nav_buttons:
+            btn.setChecked(False)
+        self.page_title.setText("账号管理")
+
+    def on_logout(self):
+        reply = QMessageBox.question(
+            self, "确认退出", "确定要退出登录吗？",
+            QMessageBox.Yes | QMessageBox.No, QMessageBox.No
+        )
+        if reply == QMessageBox.Yes:
+            self._logged_out = True
+            self.close()
 
     def on_nav_clicked(self, idx):
         titles = ["仪表盘", "明细", "统计"]
@@ -612,6 +680,158 @@ class MainWindow(QMainWindow):
             self.stat_content_layout.addWidget(row)
 
         self.stat_content_layout.addStretch()
+
+    # ==================== Account Management Page ====================
+    def create_account_page(self):
+        page = QWidget()
+        layout = QVBoxLayout(page)
+        layout.setContentsMargins(24, 16, 24, 16)
+        layout.setSpacing(12)
+
+        header = QHBoxLayout()
+        title = QLabel("账号列表")
+        title.setFont(QFont("Microsoft YaHei", 14, QFont.Bold))
+        title.setStyleSheet("color: #1a1a1a; padding: 8px 0;")
+        header.addWidget(title)
+        header.addStretch()
+
+        add_btn = QPushButton("+ 新增账号")
+        add_btn.setObjectName("add_btn")
+        add_btn.setCursor(Qt.PointingHandCursor)
+        add_btn.setFixedHeight(36)
+        add_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #1890ff;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                padding: 8px 20px;
+                font-size: 13px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #40a9ff;
+            }
+            QPushButton:pressed {
+                background-color: #096dd9;
+            }
+        """)
+        add_btn.clicked.connect(self.on_add_account)
+        header.addWidget(add_btn)
+
+        layout.addLayout(header)
+
+        self.account_table = QTableWidget()
+        self.account_table.setColumnCount(4)
+        self.account_table.setHorizontalHeaderLabels(["用户名", "创建时间", "更新时间", "操作"])
+        self.account_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
+        self.account_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeToContents)
+        self.account_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeToContents)
+        self.account_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.Fixed)
+        self.account_table.setColumnWidth(3, 140)
+        self.account_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.account_table.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.account_table.setAlternatingRowColors(True)
+        self.account_table.verticalHeader().setVisible(False)
+        self.account_table.setShowGrid(False)
+        layout.addWidget(self.account_table)
+
+        return page
+
+    def refresh_accounts(self):
+        accounts = self.db.get_accounts()
+        self.account_table.setRowCount(len(accounts))
+        self.account_table.verticalHeader().setDefaultSectionSize(72)
+
+        for row, acc in enumerate(accounts):
+            username_item = QTableWidgetItem(acc['username'])
+            username_item.setFont(QFont("Microsoft YaHei", 11))
+            username_item.setTextAlignment(Qt.AlignCenter)
+            self.account_table.setItem(row, 0, username_item)
+
+            create_time_item = QTableWidgetItem(acc.get('createTime', ''))
+            create_time_item.setTextAlignment(Qt.AlignCenter)
+            create_time_item.setForeground(QColor("#8c8c8c"))
+            create_time_item.setFont(QFont("Microsoft YaHei", 9))
+            self.account_table.setItem(row, 1, create_time_item)
+
+            update_time_item = QTableWidgetItem(acc.get('updateTime', ''))
+            update_time_item.setTextAlignment(Qt.AlignCenter)
+            update_time_item.setForeground(QColor("#8c8c8c"))
+            update_time_item.setFont(QFont("Microsoft YaHei", 9))
+            self.account_table.setItem(row, 2, update_time_item)
+
+            action_widget = QWidget()
+            action_widget.setStyleSheet("background-color: transparent;")
+            action_layout = QHBoxLayout(action_widget)
+            action_layout.setContentsMargins(8, 4, 8, 4)
+            action_layout.setSpacing(8)
+
+            edit_btn = QPushButton("编辑")
+            edit_btn.setCursor(Qt.PointingHandCursor)
+            edit_btn.setFixedSize(56, 28)
+            edit_btn.setStyleSheet("""
+                QPushButton {
+                    background-color: transparent;
+                    color: #1890ff;
+                    border: 1px solid #1890ff;
+                    border-radius: 4px;
+                    font-size: 12px;
+                }
+                QPushButton:hover {
+                    background-color: #1890ff;
+                    color: white;
+                }
+            """)
+            edit_btn.clicked.connect(lambda checked, a=acc: self.on_edit_account(a))
+            action_layout.addWidget(edit_btn)
+            action_layout.addStretch()
+
+            is_admin = acc['username'] == 'admin'
+            del_btn = QPushButton("删除")
+            del_btn.setCursor(Qt.PointingHandCursor)
+            del_btn.setFixedSize(56, 28)
+            del_color = "#bfbfbf" if is_admin else "#ff4d4f"
+            del_btn.setStyleSheet(f"""
+                QPushButton {{
+                    background-color: transparent;
+                    color: {del_color};
+                    border: 1px solid {del_color};
+                    border-radius: 4px;
+                    font-size: 12px;
+                }}
+                QPushButton:hover {{
+                    background-color: {del_color};
+                    color: white;
+                }}
+            """)
+            del_btn.setEnabled(not is_admin)
+            del_btn.clicked.connect(lambda checked, aid=acc['id']: self.on_delete_account(aid))
+            action_layout.addWidget(del_btn)
+
+            self.account_table.setCellWidget(row, 3, action_widget)
+
+    def on_add_account(self):
+        dialog = AccountFormDialog(self.db, parent=self)
+        if dialog.exec() == QDialog.Accepted:
+            self.refresh_accounts()
+
+    def on_edit_account(self, account):
+        dialog = AccountFormDialog(self.db, account=account, parent=self)
+        if dialog.exec() == QDialog.Accepted:
+            self.refresh_accounts()
+
+    def on_delete_account(self, account_id):
+        reply = QMessageBox.question(
+            self, "确认删除", "确定要删除该账号吗？",
+            QMessageBox.Yes | QMessageBox.No, QMessageBox.No
+        )
+        if reply == QMessageBox.Yes:
+            success, message = self.db.delete_account(account_id)
+            if success:
+                self.refresh_accounts()
+            else:
+                QMessageBox.critical(self, "错误", message)
 
     def closeEvent(self, event):
         self.db.close()

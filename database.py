@@ -205,7 +205,7 @@ class Database:
                 COALESCE(SUM(CASE WHEN type='income' THEN amount ELSE 0 END), 0) as total_income,
                 COALESCE(SUM(CASE WHEN type='expense' THEN amount ELSE 0 END), 0) as total_expense
             FROM my_transactions
-            WHERE date >= ? AND date <= ?""",
+            WHERE date >= ? AND date < ?""",
             (start_date, end_date)
         )
         row = dict(self.cursor.fetchone())
@@ -233,10 +233,12 @@ class Database:
 
     def get_category_summary(self, start_date: str, end_date: str, type: str = 'expense') -> List[Dict]:
         self.cursor.execute(
-            """SELECT c.name, c.icon, SUM(t.amount) as total
+            """SELECT COALESCE(c.name, '未分类') AS name,
+                      COALESCE(c.icon, '📁') AS icon,
+                      SUM(t.amount) AS total
             FROM my_transactions t
             LEFT JOIN my_categories c ON t.category_id = c.id
-            WHERE t.date >= ? AND t.date <= ? AND t.type = ?
+            WHERE t.date >= ? AND t.date < ? AND t.type = ?
             GROUP BY t.category_id
             ORDER BY total DESC""",
             (start_date, end_date, type)

@@ -11,6 +11,7 @@ from PySide6.QtGui import QFont, QColor, QIcon
 from ui.dialogs import TransactionDialog
 from ui.account_dialog import AccountFormDialog
 from ui.date_range_picker import DateRangePicker
+from ui.month_picker import MonthPicker
 from datetime import date, datetime
 
 
@@ -118,7 +119,7 @@ class MainWindow(QMainWindow):
         separator.setStyleSheet("color: #d9d9d9;")
         layout.addWidget(separator)
 
-        self.account_btn = QPushButton(f"👤 {self.username}")
+        self.account_btn = QPushButton(f"👤 {self.username}  ▾")
         self.account_btn.setCursor(Qt.PointingHandCursor)
         self.account_btn.setStyleSheet("""
             QPushButton {
@@ -135,30 +136,43 @@ class MainWindow(QMainWindow):
                 border-color: #1890ff;
                 color: #1890ff;
             }
+            QPushButton::menu-indicator {
+                image: none;
+                width: 0;
+            }
         """)
-        self.account_btn.clicked.connect(self.on_account_btn_click)
-        layout.addWidget(self.account_btn)
-
-        logout_btn = QPushButton("退出登录")
-        logout_btn.setCursor(Qt.PointingHandCursor)
-        logout_btn.setStyleSheet("""
-            QPushButton {
-                background-color: transparent;
-                color: #8c8c8c;
-                font-size: 13px;
-                border: 1px solid #d9d9d9;
+        account_menu = QMenu(self.account_btn)
+        account_menu.setObjectName("accountMenu")
+        account_menu.setStyleSheet("""
+            QMenu#accountMenu {
+                background-color: #ffffff;
+                border: 1px solid #e8e8e8;
+                border-radius: 8px;
+                padding: 6px;
+            }
+            QMenu#accountMenu::item {
+                color: #1a1a1a;
+                padding: 9px 28px 9px 14px;
                 border-radius: 6px;
-                padding: 6px 12px;
-                margin-left: 8px;
+                font-size: 13px;
             }
-            QPushButton:hover {
-                background-color: #fff1f0;
-                border-color: #ff4d4f;
-                color: #ff4d4f;
+            QMenu#accountMenu::item:selected {
+                background-color: #e6f7ff;
+                color: #1890ff;
+            }
+            QMenu#accountMenu::separator {
+                height: 1px;
+                background-color: #f0f0f0;
+                margin: 5px 8px;
             }
         """)
-        logout_btn.clicked.connect(self.on_logout)
-        layout.addWidget(logout_btn)
+        manage_action = account_menu.addAction("账号管理")
+        manage_action.triggered.connect(self.on_account_btn_click)
+        account_menu.addSeparator()
+        logout_action = account_menu.addAction("退出登录")
+        logout_action.triggered.connect(self.on_logout)
+        self.account_btn.setMenu(account_menu)
+        layout.addWidget(self.account_btn)
 
         return header
 
@@ -504,39 +518,25 @@ class MainWindow(QMainWindow):
         filter_bar = QFrame()
         filter_bar.setObjectName("filterBar")
         header = QHBoxLayout(filter_bar)
-        header.setContentsMargins(20, 14, 20, 14)
-        header.setSpacing(14)
+        header.setContentsMargins(16, 12, 16, 12)
+        header.setSpacing(8)
 
         period_label = QLabel("统计周期")
         period_label.setObjectName("filter_label")
         header.addWidget(period_label)
 
-        self.stat_year = QComboBox()
-        current_year = date.today().year
-        for y in range(current_year - 3, current_year + 1):
-            self.stat_year.addItem(str(y), y)
-        self.stat_year.setCurrentText(str(current_year))
-        self.stat_year.setFixedWidth(100)
-        header.addWidget(self.stat_year)
-
-        year_label = QLabel("年")
-        year_label.setObjectName("filter_label")
-        header.addWidget(year_label)
-
-        self.stat_month = QComboBox()
-        for m in range(1, 13):
-            self.stat_month.addItem(str(m), m)
-        self.stat_month.setCurrentIndex(date.today().month - 1)
-        self.stat_month.setFixedWidth(80)
-        header.addWidget(self.stat_month)
-
-        month_label = QLabel("月")
-        month_label.setObjectName("filter_label")
-        header.addWidget(month_label)
+        today = date.today()
+        self.stat_period = MonthPicker(today.year, today.month)
+        self.stat_period.setMinimumWidth(170)
+        self.stat_period.setMaximumWidth(230)
+        self.stat_period.setFixedHeight(38)
+        header.addWidget(self.stat_period, 2)
 
         query_btn = QPushButton("🔍 查询")
         query_btn.setObjectName("query_btn")
         query_btn.setCursor(Qt.PointingHandCursor)
+        query_btn.setMinimumWidth(72)
+        query_btn.setFixedHeight(38)
         query_btn.clicked.connect(self.refresh_statistics)
         header.addWidget(query_btn)
 
@@ -601,10 +601,8 @@ class MainWindow(QMainWindow):
         return page
 
     def refresh_statistics(self):
-        year = self.stat_year.currentData()
-        month = self.stat_month.currentData()
-        if year is None:
-            return
+        year = self.stat_period.year()
+        month = self.stat_period.month()
 
         start = f"{year:04d}-{month:02d}-01"
         if month == 12:
@@ -620,8 +618,8 @@ class MainWindow(QMainWindow):
         tx_type = 'income' if self.stat_tab_income.isChecked() else 'expense'
         categories = self.db.get_category_summary(start, end, tx_type)
 
-        for i in reversed(range(self.stat_content_layout.count())):
-            item = self.stat_content_layout.itemAt(i)
+        while self.stat_content_layout.count():
+            item = self.stat_content_layout.takeAt(0)
             if item.widget():
                 item.widget().deleteLater()
 
@@ -632,6 +630,7 @@ class MainWindow(QMainWindow):
             empty.setAlignment(Qt.AlignCenter)
             empty.setStyleSheet("color: #8c8c8c; font-size: 14px; padding: 40px;")
             self.stat_content_layout.addWidget(empty)
+            self.stat_content_layout.addStretch()
             return
 
         for cat in categories:
@@ -647,12 +646,12 @@ class MainWindow(QMainWindow):
             row_layout = QHBoxLayout(row)
             row_layout.setContentsMargins(16, 12, 16, 12)
 
-            icon_label = QLabel(cat.get('icon', '📁'))
+            icon_label = QLabel(cat.get('icon') or '📁')
             icon_label.setFont(QFont("", 18))
             row_layout.addWidget(icon_label)
 
             name_layout = QVBoxLayout()
-            name_label = QLabel(cat['name'])
+            name_label = QLabel(cat.get('name') or '未分类')
             name_label.setFont(QFont("", 13, QFont.Bold))
             name_label.setStyleSheet("color: #1a1a1a;")
             name_layout.addWidget(name_label)
@@ -697,9 +696,10 @@ class MainWindow(QMainWindow):
         header.addWidget(title)
         header.addStretch()
 
-        add_btn = QPushButton("+ 新增账号")
-        add_btn.setObjectName("add_btn")
+        add_btn = QPushButton("＋  新增账号")
+        add_btn.setObjectName("account_add_btn")
         add_btn.setCursor(Qt.PointingHandCursor)
+        add_btn.setFixedSize(126, 40)
         add_btn.clicked.connect(self.on_add_account)
         header.addWidget(add_btn)
 

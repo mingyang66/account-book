@@ -131,8 +131,8 @@ QFrame#filterBar {
 
 QFrame#filterBar QDateEdit, QFrame#filterBar QComboBox {
     padding: 0 8px;
-    min-height: 36px;
-    max-height: 36px;
+    min-height: 38px;
+    max-height: 38px;
 }
 
 QPushButton#dateRangePicker {
@@ -152,6 +152,26 @@ QPushButton#dateRangePicker:hover {
 }
 
 QPushButton#dateRangePicker:pressed {
+    background-color: #e6f7ff;
+}
+
+QPushButton#monthPicker {
+    background-color: #ffffff;
+    color: #1a1a1a;
+    border: 1px solid #d9d9d9;
+    border-radius: 6px;
+    padding: 0 12px;
+    text-align: left;
+    font-size: 13px;
+}
+
+QPushButton#monthPicker:hover {
+    background-color: #fafdff;
+    border-color: #40a9ff;
+    color: #1890ff;
+}
+
+QPushButton#monthPicker:pressed {
     background-color: #e6f7ff;
 }
 
@@ -177,6 +197,37 @@ QPushButton#add_btn:hover {
 
 QPushButton#add_btn:pressed {
     background-color: #096dd9;
+}
+
+QPushButton#account_add_btn {
+    background: qlineargradient(
+        x1: 0, y1: 0, x2: 1, y2: 1,
+        stop: 0 #40a9ff, stop: 1 #1677ff
+    );
+    color: #ffffff;
+    border: 1px solid #1677ff;
+    border-radius: 9px;
+    padding: 0 18px;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+QPushButton#account_add_btn:hover {
+    background: qlineargradient(
+        x1: 0, y1: 0, x2: 1, y2: 1,
+        stop: 0 #69bfff, stop: 1 #4096ff
+    );
+    border-color: #4096ff;
+}
+
+QPushButton#account_add_btn:pressed {
+    background-color: #0958d9;
+    border-color: #0958d9;
+    padding-top: 1px;
+}
+
+QPushButton#account_add_btn:focus {
+    border: 2px solid #91caff;
 }
 
 QPushButton#delete_btn {

@@ -15,6 +15,7 @@ from ui.dialogs import TransactionDialog
 from ui.account_dialog import AccountFormDialog
 from ui.date_range_picker import DateRangePicker
 from ui.month_picker import MonthPicker
+from ui.confirm_dialog import ConfirmDialog
 from datetime import date, datetime
 
 
@@ -187,11 +188,14 @@ class MainWindow(QMainWindow):
         self.page_title.setText("账号管理")
 
     def on_logout(self):
-        reply = QMessageBox.question(
-            self, "确认退出", "确定要退出登录吗？",
-            QMessageBox.Yes | QMessageBox.No, QMessageBox.No
+        confirmed = ConfirmDialog.ask(
+            self,
+            "退出登录",
+            f"确定要退出账号“{self.username}”吗？",
+            "退出后需要重新输入账号和密码。",
+            "退出登录",
         )
-        if reply == QMessageBox.Yes:
+        if confirmed:
             self._logged_out = True
             self.close()
 
@@ -709,7 +713,7 @@ class MainWindow(QMainWindow):
         del_btn = QPushButton("🗑 删除")
         del_btn.setObjectName("delete_btn")
         del_btn.setCursor(Qt.PointingHandCursor)
-        del_btn.clicked.connect(lambda checked, tid=t['id']: self.on_delete_transaction(tid))
+        del_btn.clicked.connect(lambda checked, item=t: self.on_delete_transaction(item))
         self.tx_table.setCellWidget(row, 6, del_btn)
 
     def on_add_transaction(self):
@@ -734,13 +738,17 @@ class MainWindow(QMainWindow):
             self.refresh_transactions()
             self.refresh_dashboard()
 
-    def on_delete_transaction(self, tid):
-        reply = QMessageBox.question(
-            self, "确认删除", "确定要删除这条记录吗？",
-            QMessageBox.Yes | QMessageBox.No, QMessageBox.No
+    def on_delete_transaction(self, transaction):
+        transaction_type = "收入" if transaction['type'] == 'income' else "支出"
+        confirmed = ConfirmDialog.ask(
+            self,
+            "删除明细",
+            f"确定删除这笔{transaction_type} ¥ {transaction['amount']:,.2f} 吗？",
+            f"记录日期：{transaction['date']}。删除后无法恢复。",
+            "确认删除",
         )
-        if reply == QMessageBox.Yes:
-            self.db.delete_transaction(tid)
+        if confirmed:
+            self.db.delete_transaction(transaction['id'])
             self.refresh_transactions()
             self.refresh_dashboard()
 
@@ -1026,7 +1034,7 @@ class MainWindow(QMainWindow):
                 }}
             """)
             del_btn.setEnabled(not is_admin)
-            del_btn.clicked.connect(lambda checked, aid=acc['id']: self.on_delete_account(aid))
+            del_btn.clicked.connect(lambda checked, account=acc: self.on_delete_account(account))
             action_layout.addWidget(del_btn)
 
             self.account_table.setCellWidget(row, 3, action_widget)
@@ -1041,13 +1049,16 @@ class MainWindow(QMainWindow):
         if dialog.exec() == QDialog.Accepted:
             self.refresh_accounts()
 
-    def on_delete_account(self, account_id):
-        reply = QMessageBox.question(
-            self, "确认删除", "确定要删除该账号吗？",
-            QMessageBox.Yes | QMessageBox.No, QMessageBox.No
+    def on_delete_account(self, account):
+        confirmed = ConfirmDialog.ask(
+            self,
+            "删除账号",
+            f"确定删除账号“{account['username']}”吗？",
+            "删除后该账号将无法登录，此操作无法恢复。",
+            "确认删除",
         )
-        if reply == QMessageBox.Yes:
-            success, message = self.db.delete_account(account_id)
+        if confirmed:
+            success, message = self.db.delete_account(account['id'])
             if success:
                 self.refresh_accounts()
             else:

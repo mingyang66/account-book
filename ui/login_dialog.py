@@ -1,8 +1,8 @@
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
-    QPushButton, QMessageBox, QFrame, QSizePolicy
+    QPushButton, QFrame, QSizePolicy
 )
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QPropertyAnimation, QSequentialAnimationGroup, QEasingCurve
 from PySide6.QtGui import QFont, QLinearGradient, QPainter, QColor
 
 
@@ -37,6 +37,14 @@ QFrame#inputFrame {
     border-radius: 10px;
     padding: 0 8px;
     min-height: 42px;
+}
+
+QFrame#inputFrame[error="true"] {
+    border: 2px solid #ff4d4f;
+}
+
+QFrame#inputFrame[error="true"] QLineEdit {
+    color: #ff4d4f;
 }
 
 QLineEdit {
@@ -164,9 +172,9 @@ class LoginDialog(QDialog):
         card_layout.setSpacing(50)
         
         # 用户名输入区域
-        username_frame = QFrame()
-        username_frame.setObjectName("inputFrame")
-        username_layout = QHBoxLayout(username_frame)
+        self.username_frame = QFrame()
+        self.username_frame.setObjectName("inputFrame")
+        username_layout = QHBoxLayout(self.username_frame)
         username_layout.setContentsMargins(0, 0, 0, 0)
         username_layout.setSpacing(0)
         
@@ -178,14 +186,16 @@ class LoginDialog(QDialog):
         self.username_input = QLineEdit()
         self.username_input.setPlaceholderText("请输入用户名...")
         self.username_input.setFont(QFont("", 12))
+        self.username_input.setFocusPolicy(Qt.StrongFocus)
+        self.username_input.textChanged.connect(self.clear_username_error)
         username_layout.addWidget(self.username_input)
         
-        card_layout.addWidget(username_frame)
+        card_layout.addWidget(self.username_frame)
         
         # 密码输入区域
-        password_frame = QFrame()
-        password_frame.setObjectName("inputFrame")
-        password_layout = QHBoxLayout(password_frame)
+        self.password_frame = QFrame()
+        self.password_frame.setObjectName("inputFrame")
+        password_layout = QHBoxLayout(self.password_frame)
         password_layout.setContentsMargins(0, 0, 0, 0)
         password_layout.setSpacing(0)
         
@@ -199,6 +209,7 @@ class LoginDialog(QDialog):
         self.password_input.setEchoMode(QLineEdit.Password)
         self.password_input.setFont(QFont("", 13))
         self.password_input.returnPressed.connect(self.on_login)
+        self.password_input.textChanged.connect(self.clear_password_error)
         password_layout.addWidget(self.password_input)
         
         # 密码显示切换按钮
@@ -208,7 +219,7 @@ class LoginDialog(QDialog):
         self.pwd_toggle_btn.clicked.connect(self.toggle_password_visibility)
         password_layout.addWidget(self.pwd_toggle_btn)
         
-        card_layout.addWidget(password_frame)
+        card_layout.addWidget(self.password_frame)
         
         # 添加间距
         card_layout.addSpacing(12)
@@ -245,24 +256,61 @@ class LoginDialog(QDialog):
             self.pwd_toggle_btn.setText("🙈")
             self.password_visible = True
 
+    def shake_frame(self, frame):
+        """对输入框执行抖动动画"""
+        original_pos = frame.pos().x()
+        anim = QSequentialAnimationGroup(frame)
+        
+        offsets = [-12, 10, -8, 6, -4, 2, 0]
+        for offset in offsets:
+            a = QPropertyAnimation(frame, b"pos")
+            a.setDuration(50)
+            a.setEasingCurve(QEasingCurve.OutQuad)
+            a.setStartValue(frame.pos())
+            a.setEndValue(frame.pos() + type(frame.pos())(offset, 0))
+            anim.addAnimation(a)
+        
+        anim.start()
+        self._shake_anim = anim
+
+    def set_error(self, frame):
+        """设置输入框错误状态"""
+        frame.setProperty("error", True)
+        frame.style().unpolish(frame)
+        frame.style().polish(frame)
+        self.shake_frame(frame)
+
+    def clear_error(self, frame):
+        """清除输入框错误状态"""
+        frame.setProperty("error", False)
+        frame.style().unpolish(frame)
+        frame.style().polish(frame)
+
+    def clear_username_error(self):
+        self.clear_error(self.username_frame)
+
+    def clear_password_error(self):
+        self.clear_error(self.password_frame)
+
     def on_login(self):
         """登录处理"""
         username = self.username_input.text().strip()
         password = self.password_input.text().strip()
         
         if not username:
-            QMessageBox.warning(self, "提示", "请输入用户名")
+            self.set_error(self.username_frame)
             self.username_input.setFocus()
             return
         
         if not password:
-            QMessageBox.warning(self, "提示", "请输入密码")
+            self.set_error(self.password_frame)
             self.password_input.setFocus()
             return
         
         if self.db.verify_account(username, password):
             self.accept()
         else:
-            QMessageBox.warning(self, "登录失败", "用户名或密码错误")
+            self.set_error(self.username_frame)
+            self.set_error(self.password_frame)
             self.password_input.clear()
             self.password_input.setFocus()

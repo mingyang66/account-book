@@ -6,7 +6,7 @@ from PySide6.QtWidgets import (
     QScrollArea, QSizePolicy, QButtonGroup, QProgressBar,
     QLineEdit, QAbstractItemView, QMenu, QDialog, QToolTip
 )
-from PySide6.QtCore import Qt, QDate, QPointF
+from PySide6.QtCore import Qt, QDate, QPointF, QTimer
 from PySide6.QtGui import QFont, QColor, QIcon, QPainter, QCursor, QPen
 from PySide6.QtCharts import (
     QCategoryAxis, QChart, QChartView, QLineSeries, QScatterSeries, QValueAxis
@@ -113,9 +113,19 @@ class MainWindow(QMainWindow):
 
         layout.addStretch()
 
-        today_label = QLabel(date.today().strftime("%Y年%m月%d日"))
-        today_label.setStyleSheet("color: #8c8c8c; font-size: 13px; margin-right: 16px;")
-        layout.addWidget(today_label)
+        self.clock_label = QLabel()
+        self.clock_label.setStyleSheet(
+            "color: #8c8c8c; font-size: 13px; margin-right: 16px;"
+        )
+        self.clock_label.setMinimumWidth(166)
+        self.clock_label.setAlignment(Qt.AlignCenter)
+        layout.addWidget(self.clock_label)
+
+        self.clock_timer = QTimer(self)
+        self.clock_timer.setInterval(1000)
+        self.clock_timer.timeout.connect(self.update_clock)
+        self.update_clock()
+        self.clock_timer.start()
 
         separator = QFrame()
         separator.setFrameShape(QFrame.VLine)
@@ -179,6 +189,9 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.account_btn)
 
         return header
+
+    def update_clock(self):
+        self.clock_label.setText(datetime.now().strftime("%Y年%m月%d日 %H:%M:%S"))
 
     def on_account_btn_click(self):
         self.stacked.setCurrentIndex(3)

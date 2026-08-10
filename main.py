@@ -29,7 +29,7 @@ def main():
         window = MainWindow(db, username)
         window.show()
         app.exec()
-
+        #获取window对象的_logged_out属性，不存在则使用False，用户点击退出会设置为True
         logged_out = getattr(window, '_logged_out', False)
         window.close()
         db.close()

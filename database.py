@@ -1,3 +1,7 @@
+"""
+__init__：初始化数据库对象
+_get_sql_path：获取指定sql脚本的绝对路径
+"""
 import os
 import sqlite3
 from datetime import datetime, date

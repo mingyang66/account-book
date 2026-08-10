@@ -16,15 +16,16 @@ def main():
     app.setFont(font)
 
     while True:
+        #创建数据库对象
         db = Database()
-
+        #创建登录提示框对象
         login_dialog = LoginDialog(db)
         if login_dialog.exec() != LoginDialog.Accepted:
             db.close()
             break
 
         username = login_dialog.username_input.text().strip()
-
+        #创建主应用程序窗口
         window = MainWindow(db, username)
         window.show()
         app.exec()

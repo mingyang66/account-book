@@ -10,9 +10,9 @@ from ui.amount_input import AmountInput
 
 
 class TransactionDialog(QDialog):
-    def __init__(self, db, transaction=None, parent=None):
+    def __init__(self, transaction_service, transaction=None, parent=None):
         super().__init__(parent)
-        self.db = db
+        self.transaction_service = transaction_service
         self.transaction = transaction
         self.selected_type = 'expense'
         self.selected_category_id = None
@@ -159,7 +159,9 @@ class TransactionDialog(QDialog):
 
     def update_categories(self):
         self.category_combo.clear()
-        categories = self.db.get_categories(type=self.selected_type)
+        categories = self.transaction_service.get_categories(
+            type=self.selected_type
+        )
         for cat in categories:
             self.category_combo.addItem(f"{cat['icon']} {cat['name']}", cat['id'])
         if categories:

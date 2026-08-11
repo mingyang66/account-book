@@ -4,23 +4,13 @@ _get_sql_path：获取指定sql脚本的绝对路径
 """
 import os
 import sqlite3
-from datetime import datetime, date
 from typing import List, Dict, Optional
-from session import UserSession
-from security import PasswordHasher
 
 
 class Database:
-    def __init__(
-        self,
-        session: UserSession,
-        password_hasher: PasswordHasher,
-        db_path: str = "account_book.db",
-    ):
-        self.session = session
-        self.password_hasher = password_hasher
+    def __init__(self, db_path: str = "account_book.db"):
         self.db_path = db_path
-        self.conn = sqlite3.connect(db_path, check_same_thread=False)
+        self.conn = sqlite3.connect(db_path)
         self.conn.row_factory = sqlite3.Row
         self.cursor = self.conn.cursor()
         self._create_tables()
@@ -36,25 +26,15 @@ class Database:
             sql = f.read()
         self.cursor.executescript(sql)
         self.conn.commit()
-        self._init_default_account()
         self._init_default_categories()
 
-    def _init_default_account(self):
-        self.cursor.execute("SELECT COUNT(*) FROM my_account")
-        if self.cursor.fetchone()[0] == 0:
-            self.cursor.execute(
-                "INSERT INTO my_account (accountcode, username, password) VALUES (?, ?, ?)",
-                (1000000, 'admin', self.password_hasher.hash('123456'))
-            )
-            self.conn.commit()
-
-    def verify_account(self, username: str, password: str) -> bool:
+    def get_account_auth_data(self, username: str) -> Optional[Dict]:
         row = self.conn.execute(
-            "SELECT password FROM my_account WHERE username = ?", (username,)
+            """SELECT id, accountcode, username, password
+               FROM my_account WHERE username = ?""",
+            (username,)
         ).fetchone()
-        return row is not None and self.password_hasher.verify(
-            password, row['password']
-        )
+        return dict(row) if row else None
 
     def get_account_by_username(self, username: str) -> Optional[Dict]:
         row = self.conn.execute(
@@ -63,20 +43,14 @@ class Database:
         ).fetchone()
         return dict(row) if row else None
 
-    def _require_current_accountcode(self) -> int:
-        return self.session.accountcode
-
-    def change_password(self, username: str, old_password: str, new_password: str) -> tuple[bool, str]:
-        if not self.verify_account(username, old_password):
-            return False, "原密码错误"
-        if not new_password or len(new_password) < 6:
-            return False, "新密码不能少于6位"
-        self.cursor.execute(
-            "UPDATE my_account SET password = ?, updateTime = CURRENT_TIMESTAMP WHERE username = ?",
-            (self.password_hasher.hash(new_password), username)
-        )
-        self.conn.commit()
-        return True, "密码修改成功"
+    def update_password_hash(self, username: str, password_hash: str):
+        with self.conn:
+            self.conn.execute(
+                """UPDATE my_account
+                   SET password = ?, updateTime = CURRENT_TIMESTAMP
+                   WHERE username = ?""",
+                (password_hash, username)
+            )
 
     def get_accounts(self) -> List[Dict]:
         self.cursor.execute(
@@ -85,72 +59,66 @@ class Database:
         )
         return [dict(row) for row in self.cursor.fetchall()]
 
-    def add_account(self, username: str, password: str) -> tuple[bool, str]:
-        if not username:
-            return False, "用户名不能为空"
-        if not password or len(password) < 6:
-            return False, "密码不能少于6位"
-        self.cursor.execute("SELECT COUNT(*) FROM my_account WHERE username = ?", (username,))
-        if self.cursor.fetchone()[0] > 0:
-            return False, "用户名已存在"
-        next_code = self.conn.execute(
+    def username_exists(self, username: str, exclude_id: int | None = None) -> bool:
+        if exclude_id is None:
+            row = self.conn.execute(
+                "SELECT 1 FROM my_account WHERE username = ?", (username,)
+            ).fetchone()
+        else:
+            row = self.conn.execute(
+                "SELECT 1 FROM my_account WHERE username = ? AND id != ?",
+                (username, exclude_id)
+            ).fetchone()
+        return row is not None
+
+    def get_next_accountcode(self) -> int:
+        return self.conn.execute(
             "SELECT COALESCE(MAX(accountcode), 999999) + 1 FROM my_account"
         ).fetchone()[0]
-        self.cursor.execute(
-            "INSERT INTO my_account (accountcode, username, password) VALUES (?, ?, ?)",
-            (next_code, username, self.password_hasher.hash(password))
-        )
-        self.conn.commit()
-        return True, "添加成功"
 
-    def update_account(self, id: int, username: str, password: str = "") -> tuple[bool, str]:
-        if not username:
-            return False, "用户名不能为空"
-        if password and len(password) < 6:
-            return False, "密码不能少于6位"
-        self.cursor.execute(
-            "SELECT COUNT(*) FROM my_account WHERE username = ? AND id != ?",
-            (username, id)
-        )
-        if self.cursor.fetchone()[0] > 0:
-            return False, "用户名已存在"
-        if password:
-            self.cursor.execute(
-                """UPDATE my_account
-                   SET username = ?, password = ?, updateTime = CURRENT_TIMESTAMP
-                   WHERE id = ?""",
-                (username, self.password_hasher.hash(password), id)
+    def insert_account(self, accountcode: int, username: str, password_hash: str):
+        with self.conn:
+            self.conn.execute(
+                """INSERT INTO my_account (accountcode, username, password)
+                   VALUES (?, ?, ?)""",
+                (accountcode, username, password_hash)
             )
-        else:
-            self.cursor.execute(
-                """UPDATE my_account
-                   SET username = ?, updateTime = CURRENT_TIMESTAMP
-                   WHERE id = ?""",
-                (username, id)
-            )
-        self.conn.commit()
-        return True, "修改成功"
 
-    def delete_account(self, id: int) -> tuple[bool, str]:
-        self.cursor.execute(
-            "SELECT username, accountcode FROM my_account WHERE id = ?", (id,)
-        )
-        row = self.cursor.fetchone()
-        if row is None:
-            return False, "账号不存在"
-        if row[0] == 'admin':
-            return False, "admin 账号不可删除"
-        transaction_count = self.conn.execute(
+    def update_account(
+        self, account_id: int, username: str, password_hash: str | None = None
+    ):
+        with self.conn:
+            if password_hash is not None:
+                self.conn.execute(
+                    """UPDATE my_account
+                       SET username = ?, password = ?, updateTime = CURRENT_TIMESTAMP
+                       WHERE id = ?""",
+                    (username, password_hash, account_id)
+                )
+            else:
+                self.conn.execute(
+                    """UPDATE my_account
+                       SET username = ?, updateTime = CURRENT_TIMESTAMP
+                       WHERE id = ?""",
+                    (username, account_id)
+                )
+
+    def get_account_by_id(self, account_id: int) -> Optional[Dict]:
+        row = self.conn.execute(
+            "SELECT id, accountcode, username FROM my_account WHERE id = ?",
+            (account_id,)
+        ).fetchone()
+        return dict(row) if row else None
+
+    def count_transactions_by_account(self, accountcode: int) -> int:
+        return self.conn.execute(
             "SELECT COUNT(*) FROM my_transactions WHERE accountcode = ?",
-            (row['accountcode'],)
+            (accountcode,)
         ).fetchone()[0]
-        if transaction_count:
-            return False, "该账号存在交易记录，无法删除"
-        self.cursor.execute(
-            "DELETE FROM my_account WHERE id = ?", (id,)
-        )
-        self.conn.commit()
-        return True, "删除成功"
+
+    def delete_account(self, account_id: int):
+        with self.conn:
+            self.conn.execute("DELETE FROM my_account WHERE id = ?", (account_id,))
 
     def _init_default_categories(self):
         self.cursor.execute("SELECT COUNT(*) FROM my_categories")
@@ -196,9 +164,8 @@ class Database:
         self.cursor.execute("DELETE FROM my_categories WHERE id = ?", (category_id,))
         self.conn.commit()
 
-    def add_transaction(self, type: str, amount: float, category_id: int,
+    def add_transaction(self, accountcode: int, type: str, amount: float, category_id: int,
                        note: str, date: str) -> int:
-        accountcode = self._require_current_accountcode()
         self.cursor.execute(
             """INSERT INTO my_transactions
                (accountcode, type, amount, category_id, note, date)
@@ -208,9 +175,8 @@ class Database:
         self.conn.commit()
         return self.cursor.lastrowid
 
-    def update_transaction(self, id: int, type: str, amount: float,
+    def update_transaction(self, accountcode: int, id: int, type: str, amount: float,
                            category_id: int, note: str, date: str):
-        accountcode = self._require_current_accountcode()
         self.cursor.execute(
             """UPDATE my_transactions SET type=?, amount=?, category_id=?, note=?, date=?, updateTime=CURRENT_TIMESTAMP
                WHERE id=? AND accountcode=?""",
@@ -218,19 +184,17 @@ class Database:
         )
         self.conn.commit()
 
-    def delete_transaction(self, id: int):
-        accountcode = self._require_current_accountcode()
+    def delete_transaction(self, accountcode: int, id: int):
         self.cursor.execute(
             "DELETE FROM my_transactions WHERE id = ? AND accountcode = ?",
             (id, accountcode)
         )
         self.conn.commit()
 
-    def get_transactions(self, start_date: Optional[str] = None,
+    def get_transactions(self, accountcode: int, start_date: Optional[str] = None,
                          end_date: Optional[str] = None,
                          type: Optional[str] = None,
                          category_id: Optional[int] = None) -> List[Dict]:
-        accountcode = self._require_current_accountcode()
         query = """
             SELECT t.*, c.name as category_name, c.icon as category_icon
             FROM my_transactions t
@@ -256,8 +220,7 @@ class Database:
         self.cursor.execute(query, params)
         return [dict(row) for row in self.cursor.fetchall()]
 
-    def get_summary(self, start_date: str, end_date: str) -> Dict:
-        accountcode = self._require_current_accountcode()
+    def get_summary(self, accountcode: int, start_date: str, end_date: str) -> Dict:
         self.cursor.execute(
             """SELECT
                 COALESCE(SUM(CASE WHEN type='income' THEN amount ELSE 0 END), 0) as total_income,
@@ -270,8 +233,7 @@ class Database:
         row['balance'] = row['total_income'] - row['total_expense']
         return row
 
-    def get_monthly_summary(self, year: int, month: int) -> Dict:
-        accountcode = self._require_current_accountcode()
+    def get_monthly_summary(self, accountcode: int, year: int, month: int) -> Dict:
         start_date = f"{year:04d}-{month:02d}-01"
         if month == 12:
             end_date = f"{year+1:04d}-01-01"
@@ -290,8 +252,7 @@ class Database:
         row['balance'] = row['total_income'] - row['total_expense']
         return row
 
-    def get_category_summary(self, start_date: str, end_date: str, type: str = 'expense') -> List[Dict]:
-        accountcode = self._require_current_accountcode()
+    def get_category_summary(self, accountcode: int, start_date: str, end_date: str, type: str = 'expense') -> List[Dict]:
         self.cursor.execute(
             """SELECT COALESCE(c.name, '未分类') AS name,
                       COALESCE(c.icon, '📁') AS icon,

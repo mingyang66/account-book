@@ -20,9 +20,13 @@ from datetime import date, datetime
 
 
 class MainWindow(QMainWindow):
-    def __init__(self, db, session):
+    def __init__(
+        self, transaction_service, account_service, auth_service, session
+    ):
         super().__init__()
-        self.db = db
+        self.transaction_service = transaction_service
+        self.account_service = account_service
+        self.auth_service = auth_service
         self.session = session
         self._logged_out = False
         self.setWindowTitle("记账本 - 个人财务管理")
@@ -209,7 +213,7 @@ class MainWindow(QMainWindow):
             "退出登录",
         )
         if confirmed:
-            self.session.logout()
+            self.auth_service.logout()
             self._logged_out = True
             self.close()
 
@@ -380,11 +384,11 @@ class MainWindow(QMainWindow):
         start = selected_month.toString("yyyy-MM-dd")
         end = next_month.toString("yyyy-MM-dd")
 
-        summary = self.db.get_summary(start, end)
-        previous = self.db.get_monthly_summary(
+        summary = self.transaction_service.get_summary(start, end)
+        previous = self.transaction_service.get_monthly_summary(
             previous_month.year(), previous_month.month()
         )
-        transactions = self.db.get_transactions(
+        transactions = self.transaction_service.get_transactions(
             start_date=start, end_date=next_month.addDays(-1).toString("yyyy-MM-dd")
         )
 
@@ -407,7 +411,7 @@ class MainWindow(QMainWindow):
         self._refresh_dashboard_chart(selected_month)
         self._refresh_dashboard_categories(start, end)
 
-        recent = self.db.get_transactions()[:5]
+        recent = self.transaction_service.get_transactions()[:5]
         self.dash_table.setRowCount(len(recent))
         for row, t in enumerate(recent):
             self._fill_table_row(self.dash_table, row, t)
@@ -426,7 +430,9 @@ class MainWindow(QMainWindow):
         maximum = 0
         for offset in range(-5, 1):
             month_date = selected_month.addMonths(offset)
-            summary = self.db.get_monthly_summary(month_date.year(), month_date.month())
+            summary = self.transaction_service.get_monthly_summary(
+                month_date.year(), month_date.month()
+            )
             income_values.append(summary['total_income'])
             expense_values.append(summary['total_expense'])
             maximum = max(
@@ -520,7 +526,9 @@ class MainWindow(QMainWindow):
             if item.widget():
                 item.widget().deleteLater()
 
-        categories = self.db.get_category_summary(start, end, 'expense')[:4]
+        categories = self.transaction_service.get_category_summary(
+            start, end, 'expense'
+        )[:4]
         total = sum(item['total'] for item in categories)
         if not categories:
             empty = QLabel("本月暂无支出")
@@ -629,7 +637,7 @@ class MainWindow(QMainWindow):
         cat_label.setObjectName("filter_label")
         self.tx_cat_filter = QComboBox()
         self.tx_cat_filter.addItem("全部", None)
-        for cat in self.db.get_categories():
+        for cat in self.transaction_service.get_categories():
             self.tx_cat_filter.addItem(f"{cat['icon']} {cat['name']}", cat['id'])
         self.tx_cat_filter.setMinimumWidth(80)
         self.tx_cat_filter.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
@@ -689,7 +697,7 @@ class MainWindow(QMainWindow):
         tx_type = type_map[type_idx]
         cat_id = self.tx_cat_filter.currentData()
 
-        transactions = self.db.get_transactions(
+        transactions = self.transaction_service.get_transactions(
             start_date=start, end_date=end,
             type=tx_type, category_id=cat_id
         )
@@ -746,11 +754,11 @@ class MainWindow(QMainWindow):
         self.tx_table.setCellWidget(row, 6, del_btn)
 
     def on_add_transaction(self):
-        dialog = TransactionDialog(self.db, parent=self)
+        dialog = TransactionDialog(self.transaction_service, parent=self)
         if dialog.exec() == TransactionDialog.Accepted:
             data = dialog.get_data()
             try:
-                self.db.add_transaction(**data)
+                self.transaction_service.add_transaction(**data)
             except Exception as error:
                 QMessageBox.critical(self, "新增失败", f"记录保存失败：{error}")
                 return
@@ -760,10 +768,12 @@ class MainWindow(QMainWindow):
             self.refresh_dashboard()
 
     def on_edit_transaction(self, t):
-        dialog = TransactionDialog(self.db, transaction=t, parent=self)
+        dialog = TransactionDialog(
+            self.transaction_service, transaction=t, parent=self
+        )
         if dialog.exec() == TransactionDialog.Accepted:
             data = dialog.get_data()
-            self.db.update_transaction(t['id'], **data)
+            self.transaction_service.update_transaction(t['id'], **data)
             self.refresh_transactions()
             self.refresh_dashboard()
 
@@ -777,7 +787,7 @@ class MainWindow(QMainWindow):
             "确认删除",
         )
         if confirmed:
-            self.db.delete_transaction(transaction['id'])
+            self.transaction_service.delete_transaction(transaction['id'])
             self.refresh_transactions()
             self.refresh_dashboard()
 
@@ -883,13 +893,15 @@ class MainWindow(QMainWindow):
         else:
             end = f"{year:04d}-{month+1:02d}-01"
 
-        summary = self.db.get_summary(start, end)
+        summary = self.transaction_service.get_summary(start, end)
         self.stat_income_card._value_label.setText(f"¥ {summary['total_income']:,.2f}")
         self.stat_expense_card._value_label.setText(f"¥ {summary['total_expense']:,.2f}")
         self.stat_balance_card._value_label.setText(f"¥ {summary['balance']:,.2f}")
 
         tx_type = 'income' if self.stat_tab_income.isChecked() else 'expense'
-        categories = self.db.get_category_summary(start, end, tx_type)
+        categories = self.transaction_service.get_category_summary(
+            start, end, tx_type
+        )
 
         while self.stat_content_layout.count():
             item = self.stat_content_layout.takeAt(0)
@@ -999,7 +1011,7 @@ class MainWindow(QMainWindow):
         return page
 
     def refresh_accounts(self):
-        accounts = self.db.get_accounts()
+        accounts = self.account_service.get_accounts()
         self.account_table.setRowCount(len(accounts))
         self.account_table.verticalHeader().setDefaultSectionSize(72)
 
@@ -1077,12 +1089,14 @@ class MainWindow(QMainWindow):
             self.account_table.setCellWidget(row, 4, action_widget)
 
     def on_add_account(self):
-        dialog = AccountFormDialog(self.db, parent=self)
+        dialog = AccountFormDialog(self.account_service, parent=self)
         if dialog.exec() == QDialog.Accepted:
             self.refresh_accounts()
 
     def on_edit_account(self, account):
-        dialog = AccountFormDialog(self.db, account=account, parent=self)
+        dialog = AccountFormDialog(
+            self.account_service, account=account, parent=self
+        )
         if dialog.exec() == QDialog.Accepted:
             self.refresh_accounts()
 
@@ -1095,12 +1109,8 @@ class MainWindow(QMainWindow):
             "确认删除",
         )
         if confirmed:
-            success, message = self.db.delete_account(account['id'])
+            success, message = self.account_service.delete_account(account['id'])
             if success:
                 self.refresh_accounts()
             else:
                 QMessageBox.critical(self, "错误", message)
-
-    def closeEvent(self, event):
-        self.db.close()
-        super().closeEvent(event)

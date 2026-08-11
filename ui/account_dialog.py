@@ -7,9 +7,9 @@ from PySide6.QtGui import QFont
 
 
 class AccountDialog(QDialog):
-    def __init__(self, db, username, parent=None):
+    def __init__(self, account_service, username, parent=None):
         super().__init__(parent)
-        self.db = db
+        self.account_service = account_service
         self.username = username
         self.setWindowTitle("修改密码")
         self.setFixedSize(420, 350)
@@ -136,7 +136,9 @@ class AccountDialog(QDialog):
             self.confirm_pwd_input.setFocus()
             return
 
-        success, message = self.db.change_password(self.username, old_pwd, new_pwd)
+        success, message = self.account_service.change_password(
+            self.username, old_pwd, new_pwd
+        )
         if success:
             QMessageBox.information(self, "提示", message)
             self.accept()
@@ -147,9 +149,9 @@ class AccountDialog(QDialog):
 
 
 class AccountFormDialog(QDialog):
-    def __init__(self, db, account=None, parent=None):
+    def __init__(self, account_service, account=None, parent=None):
         super().__init__(parent)
-        self.db = db
+        self.account_service = account_service
         self.account = account
         self.setWindowTitle("新增账号" if account is None else "编辑账号")
         self.setFixedSize(420, 300)
@@ -265,9 +267,11 @@ class AccountFormDialog(QDialog):
             return
 
         if self.account is None:
-            success, message = self.db.add_account(username, password)
+            success, message = self.account_service.add_account(username, password)
         else:
-            success, message = self.db.update_account(self.account['id'], username, password)
+            success, message = self.account_service.update_account(
+                self.account['id'], username, password
+            )
 
         if success:
             self.accept()

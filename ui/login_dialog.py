@@ -105,9 +105,9 @@ QLabel#footerLabel {
 
 
 class LoginDialog(QDialog):
-    def __init__(self, db, parent=None):
+    def __init__(self, auth_service, parent=None):
         super().__init__(parent)
-        self.db = db
+        self.auth_service = auth_service
         self.setWindowTitle("小妖记账 - 登录")
         self.setFixedSize(440, 560)
         
@@ -307,7 +307,7 @@ class LoginDialog(QDialog):
             self.password_input.setFocus()
             return
         
-        if self.db.verify_account(username, password):
+        if self.auth_service.login(username, password):
             self.accept()
         else:
             self.set_error(self.username_frame)

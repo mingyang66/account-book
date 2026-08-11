@@ -608,10 +608,19 @@ class MainWindow(QMainWindow):
         type_label = QLabel("类型")
         type_label.setObjectName("filter_label")
         self.tx_type_filter = QComboBox()
+        self.tx_type_filter.setObjectName("txTypeFilter")
         self.tx_type_filter.addItems(["全部", "收入", "支出"])
-        self.tx_type_filter.setMinimumWidth(65)
+        self.tx_type_filter.setItemData(0, QColor("#595959"), Qt.ForegroundRole)
+        self.tx_type_filter.setItemData(1, QColor("#389e0d"), Qt.ForegroundRole)
+        self.tx_type_filter.setItemData(2, QColor("#cf1322"), Qt.ForegroundRole)
+        self.tx_type_filter.setMinimumWidth(92)
+        self.tx_type_filter.setMaximumWidth(118)
         self.tx_type_filter.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.tx_type_filter.setFixedHeight(38)
+        self.tx_type_filter.currentIndexChanged.connect(
+            self.update_type_filter_style
+        )
+        self.update_type_filter_style(0)
         filter_layout.addWidget(type_label)
         filter_layout.addWidget(self.tx_type_filter, 1)
 
@@ -664,6 +673,12 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.tx_table)
 
         return page
+
+    def update_type_filter_style(self, index):
+        filter_types = ("all", "income", "expense")
+        self.tx_type_filter.setProperty("filterType", filter_types[index])
+        self.tx_type_filter.style().unpolish(self.tx_type_filter)
+        self.tx_type_filter.style().polish(self.tx_type_filter)
 
     def refresh_transactions(self):
         start = self.tx_date_range.start_date().toString("yyyy-MM-dd")

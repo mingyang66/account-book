@@ -304,6 +304,73 @@ QLabel#filter_label {
     font-weight: 500;
 }
 
+QComboBox#txTypeFilter {
+    background-color: #ffffff;
+    color: #595959;
+    border: 1px solid #d9d9d9;
+    border-radius: 7px;
+    padding: 0 30px 0 12px;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+QComboBox#txTypeFilter:hover {
+    background-color: #fafdff;
+    border-color: #69b1ff;
+}
+
+QComboBox#txTypeFilter:focus,
+QComboBox#txTypeFilter[filterType="all"]:focus {
+    border: 2px solid #4096ff;
+}
+
+QComboBox#txTypeFilter[filterType="income"] {
+    background-color: #f6ffed;
+    color: #389e0d;
+    border-color: #95de64;
+    font-weight: bold;
+}
+
+QComboBox#txTypeFilter[filterType="income"]:focus {
+    border: 2px solid #52c41a;
+}
+
+QComboBox#txTypeFilter[filterType="expense"] {
+    background-color: #fff1f0;
+    color: #cf1322;
+    border-color: #ffaaa5;
+    font-weight: bold;
+}
+
+QComboBox#txTypeFilter[filterType="expense"]:focus {
+    border: 2px solid #ff4d4f;
+}
+
+QComboBox#txTypeFilter::drop-down {
+    subcontrol-origin: padding;
+    subcontrol-position: top right;
+    width: 28px;
+    border: none;
+    border-left: 1px solid rgba(0, 0, 0, 18);
+}
+
+QComboBox#txTypeFilter QAbstractItemView {
+    background-color: #ffffff;
+    color: #595959;
+    border: 1px solid #d9e2ec;
+    border-radius: 7px;
+    padding: 5px;
+    outline: none;
+    selection-background-color: #e6f7ff;
+    selection-color: #1677ff;
+}
+
+QComboBox#txTypeFilter QAbstractItemView::item {
+    min-height: 32px;
+    padding: 0 10px;
+    border-radius: 5px;
+}
+
 QPushButton#add_btn {
     background-color: #1890ff;
     color: white;

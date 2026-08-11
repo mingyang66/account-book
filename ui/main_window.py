@@ -20,10 +20,10 @@ from datetime import date, datetime
 
 
 class MainWindow(QMainWindow):
-    def __init__(self, db, username):
+    def __init__(self, db, session):
         super().__init__()
         self.db = db
-        self.username = username
+        self.session = session
         self._logged_out = False
         self.setWindowTitle("记账本 - 个人财务管理")
         self.setMinimumSize(1000, 650)
@@ -133,7 +133,7 @@ class MainWindow(QMainWindow):
         separator.setStyleSheet("color: #d9d9d9;")
         layout.addWidget(separator)
 
-        self.account_btn = QPushButton(f"👤 {self.username}  ▾")
+        self.account_btn = QPushButton(f"👤 {self.session.username}  ▾")
         self.account_btn.setCursor(Qt.PointingHandCursor)
         self.account_btn.setStyleSheet("""
             QPushButton {
@@ -204,11 +204,12 @@ class MainWindow(QMainWindow):
         confirmed = ConfirmDialog.ask(
             self,
             "退出登录",
-            f"确定要退出账号“{self.username}”吗？",
+            f"确定要退出账号“{self.session.username}”吗？",
             "退出后需要重新输入账号和密码。",
             "退出登录",
         )
         if confirmed:
+            self.session.logout()
             self._logged_out = True
             self.close()
 
@@ -978,13 +979,16 @@ class MainWindow(QMainWindow):
         layout.addLayout(header)
 
         self.account_table = QTableWidget()
-        self.account_table.setColumnCount(4)
-        self.account_table.setHorizontalHeaderLabels(["用户名", "创建时间", "更新时间", "操作"])
-        self.account_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
-        self.account_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeToContents)
+        self.account_table.setColumnCount(5)
+        self.account_table.setHorizontalHeaderLabels(
+            ["账号编号", "用户名", "创建时间", "更新时间", "操作"]
+        )
+        self.account_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
+        self.account_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
         self.account_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeToContents)
-        self.account_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.Fixed)
-        self.account_table.setColumnWidth(3, 140)
+        self.account_table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeToContents)
+        self.account_table.horizontalHeader().setSectionResizeMode(4, QHeaderView.Fixed)
+        self.account_table.setColumnWidth(4, 140)
         self.account_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.account_table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.account_table.setAlternatingRowColors(True)
@@ -1000,22 +1004,27 @@ class MainWindow(QMainWindow):
         self.account_table.verticalHeader().setDefaultSectionSize(72)
 
         for row, acc in enumerate(accounts):
+            accountcode_item = QTableWidgetItem(str(acc['accountcode']))
+            accountcode_item.setTextAlignment(Qt.AlignCenter)
+            accountcode_item.setForeground(QColor("#1890ff"))
+            self.account_table.setItem(row, 0, accountcode_item)
+
             username_item = QTableWidgetItem(acc['username'])
             username_item.setFont(QFont("Microsoft YaHei", 11))
             username_item.setTextAlignment(Qt.AlignCenter)
-            self.account_table.setItem(row, 0, username_item)
+            self.account_table.setItem(row, 1, username_item)
 
             create_time_item = QTableWidgetItem(acc.get('createTime', ''))
             create_time_item.setTextAlignment(Qt.AlignCenter)
             create_time_item.setForeground(QColor("#8c8c8c"))
             create_time_item.setFont(QFont("Microsoft YaHei", 9))
-            self.account_table.setItem(row, 1, create_time_item)
+            self.account_table.setItem(row, 2, create_time_item)
 
             update_time_item = QTableWidgetItem(acc.get('updateTime', ''))
             update_time_item.setTextAlignment(Qt.AlignCenter)
             update_time_item.setForeground(QColor("#8c8c8c"))
             update_time_item.setFont(QFont("Microsoft YaHei", 9))
-            self.account_table.setItem(row, 2, update_time_item)
+            self.account_table.setItem(row, 3, update_time_item)
 
             action_widget = QWidget()
             action_widget.setStyleSheet("background-color: transparent;")
@@ -1065,7 +1074,7 @@ class MainWindow(QMainWindow):
             del_btn.clicked.connect(lambda checked, account=acc: self.on_delete_account(account))
             action_layout.addWidget(del_btn)
 
-            self.account_table.setCellWidget(row, 3, action_widget)
+            self.account_table.setCellWidget(row, 4, action_widget)
 
     def on_add_account(self):
         dialog = AccountFormDialog(self.db, parent=self)

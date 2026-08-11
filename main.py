@@ -5,6 +5,7 @@ from ui.main_window import MainWindow
 from ui.login_dialog import LoginDialog
 from styles import MAIN_STYLE
 from database import Database
+from session import UserSession
 
 
 def main():
@@ -16,8 +17,9 @@ def main():
     app.setFont(font)
 
     while True:
+        session = UserSession()
         #创建数据库对象
-        db = Database()
+        db = Database(session)
         #创建登录提示框对象
         login_dialog = LoginDialog(db)
         if login_dialog.exec() != LoginDialog.Accepted:
@@ -25,13 +27,16 @@ def main():
             break
 
         username = login_dialog.username_input.text().strip()
+        account = db.get_account_by_username(username)
+        session.login(account['accountcode'], account['username'])
         #创建主应用程序窗口
-        window = MainWindow(db, username)
+        window = MainWindow(db, session)
         window.show()
         app.exec()
         #获取window对象的_logged_out属性，不存在则使用False，用户点击退出会设置为True
         logged_out = getattr(window, '_logged_out', False)
         window.close()
+        session.logout()
         db.close()
 
         if not logged_out:

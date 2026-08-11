@@ -6,6 +6,7 @@ from ui.login_dialog import LoginDialog
 from styles import MAIN_STYLE
 from database import Database
 from session import UserSession
+from security import PasswordHasher
 
 
 def main():
@@ -18,8 +19,9 @@ def main():
 
     while True:
         session = UserSession()
+        password_hasher = PasswordHasher()
         #创建数据库对象
-        db = Database(session)
+        db = Database(session, password_hasher)
         #创建登录提示框对象
         login_dialog = LoginDialog(db)
         if login_dialog.exec() != LoginDialog.Accepted:

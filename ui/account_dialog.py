@@ -179,7 +179,8 @@ class AccountFormDialog(QDialog):
         form.addRow(self.create_form_label("用户名:"), self.username_input)
 
         self.password_input = QLineEdit()
-        self.password_input.setPlaceholderText("请输入密码（至少6位）")
+        password_hint = "留空则不修改密码" if self.account else "请输入密码（至少6位）"
+        self.password_input.setPlaceholderText(password_hint)
         self.password_input.setEchoMode(QLineEdit.Password)
         self.password_input.setFont(QFont("Microsoft YaHei", 10))
         self.password_input.setMinimumHeight(32)
@@ -236,7 +237,6 @@ class AccountFormDialog(QDialog):
 
         if self.account:
             self.username_input.setText(self.account['username'])
-            self.password_input.setText(self.account['password'])
 
     def create_form_label(self, text):
         label = QLabel(text)
@@ -254,7 +254,12 @@ class AccountFormDialog(QDialog):
             self.username_input.setFocus()
             return
 
-        if not password or len(password) < 6:
+        if self.account is None and (not password or len(password) < 6):
+            QMessageBox.warning(self, "提示", "密码不能少于6位")
+            self.password_input.setFocus()
+            return
+
+        if self.account is not None and password and len(password) < 6:
             QMessageBox.warning(self, "提示", "密码不能少于6位")
             self.password_input.setFocus()
             return

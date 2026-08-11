@@ -7,11 +7,18 @@ import sqlite3
 from datetime import datetime, date
 from typing import List, Dict, Optional
 from session import UserSession
+from security import PasswordHasher
 
 
 class Database:
-    def __init__(self, session: UserSession, db_path: str = "account_book.db"):
+    def __init__(
+        self,
+        session: UserSession,
+        password_hasher: PasswordHasher,
+        db_path: str = "account_book.db",
+    ):
         self.session = session
+        self.password_hasher = password_hasher
         self.db_path = db_path
         self.conn = sqlite3.connect(db_path, check_same_thread=False)
         self.conn.row_factory = sqlite3.Row
@@ -37,16 +44,17 @@ class Database:
         if self.cursor.fetchone()[0] == 0:
             self.cursor.execute(
                 "INSERT INTO my_account (accountcode, username, password) VALUES (?, ?, ?)",
-                (1000000, 'admin', '123456')
+                (1000000, 'admin', self.password_hasher.hash('123456'))
             )
             self.conn.commit()
 
     def verify_account(self, username: str, password: str) -> bool:
-        self.cursor.execute(
-            "SELECT COUNT(*) FROM my_account WHERE username = ? AND password = ?",
-            (username, password)
+        row = self.conn.execute(
+            "SELECT password FROM my_account WHERE username = ?", (username,)
+        ).fetchone()
+        return row is not None and self.password_hasher.verify(
+            password, row['password']
         )
-        return self.cursor.fetchone()[0] > 0
 
     def get_account_by_username(self, username: str) -> Optional[Dict]:
         row = self.conn.execute(
@@ -65,13 +73,16 @@ class Database:
             return False, "新密码不能少于6位"
         self.cursor.execute(
             "UPDATE my_account SET password = ?, updateTime = CURRENT_TIMESTAMP WHERE username = ?",
-            (new_password, username)
+            (self.password_hasher.hash(new_password), username)
         )
         self.conn.commit()
         return True, "密码修改成功"
 
     def get_accounts(self) -> List[Dict]:
-        self.cursor.execute("SELECT * FROM my_account ORDER BY createTime DESC")
+        self.cursor.execute(
+            """SELECT id, accountcode, username, createTime, updateTime
+               FROM my_account ORDER BY createTime DESC"""
+        )
         return [dict(row) for row in self.cursor.fetchall()]
 
     def add_account(self, username: str, password: str) -> tuple[bool, str]:
@@ -87,15 +98,15 @@ class Database:
         ).fetchone()[0]
         self.cursor.execute(
             "INSERT INTO my_account (accountcode, username, password) VALUES (?, ?, ?)",
-            (next_code, username, password)
+            (next_code, username, self.password_hasher.hash(password))
         )
         self.conn.commit()
         return True, "添加成功"
 
-    def update_account(self, id: int, username: str, password: str) -> tuple[bool, str]:
+    def update_account(self, id: int, username: str, password: str = "") -> tuple[bool, str]:
         if not username:
             return False, "用户名不能为空"
-        if not password or len(password) < 6:
+        if password and len(password) < 6:
             return False, "密码不能少于6位"
         self.cursor.execute(
             "SELECT COUNT(*) FROM my_account WHERE username = ? AND id != ?",
@@ -103,10 +114,20 @@ class Database:
         )
         if self.cursor.fetchone()[0] > 0:
             return False, "用户名已存在"
-        self.cursor.execute(
-            "UPDATE my_account SET username = ?, password = ?, updateTime = CURRENT_TIMESTAMP WHERE id = ?",
-            (username, password, id)
-        )
+        if password:
+            self.cursor.execute(
+                """UPDATE my_account
+                   SET username = ?, password = ?, updateTime = CURRENT_TIMESTAMP
+                   WHERE id = ?""",
+                (username, self.password_hasher.hash(password), id)
+            )
+        else:
+            self.cursor.execute(
+                """UPDATE my_account
+                   SET username = ?, updateTime = CURRENT_TIMESTAMP
+                   WHERE id = ?""",
+                (username, id)
+            )
         self.conn.commit()
         return True, "修改成功"
 

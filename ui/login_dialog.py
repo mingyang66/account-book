@@ -1,290 +1,408 @@
-from PySide6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit,
-    QPushButton, QFrame, QSizePolicy
+from PySide6.QtCore import QEvent, QPointF, QRectF, Qt
+from PySide6.QtGui import (
+    QColor,
+    QFont,
+    QLinearGradient,
+    QPainter,
+    QPainterPath,
+    QPen,
+    QPolygonF,
 )
-from PySide6.QtCore import Qt, QPropertyAnimation, QSequentialAnimationGroup, QEasingCurve
-from PySide6.QtGui import QFont, QLinearGradient, QPainter, QColor
+from PySide6.QtWidgets import (
+    QDialog,
+    QFrame,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
+)
 
 
-# 登录页面专用样式
 LOGIN_STYLE = """
 QDialog#LoginDialog {
-    background-color: transparent;
+    background-color: #f3ead8;
 }
 
-QFrame#cardFrame {
-    background-color: rgba(255, 255, 255, 0.95);
-    border: 1px solid rgba(255, 255, 255, 0.5);
-    border-radius: 16px;
-    padding: 20px;
+QFrame#loginCard {
+    background-color: #fffdf8;
+    border: 1px solid #dfd3bd;
+    border-radius: 22px;
 }
 
-QLabel#titleLabel {
-    color: #1890ff;
-    font-size: 24px;
+QLabel#eyebrowLabel {
+    color: #b45f43;
+    font-size: 12px;
     font-weight: bold;
     letter-spacing: 2px;
 }
 
+QLabel#titleLabel {
+    color: #24463a;
+    font-size: 30px;
+    font-weight: bold;
+}
+
 QLabel#subtitleLabel {
-    color: #8c8c8c;
+    color: #7c7468;
     font-size: 13px;
 }
 
+QLabel#fieldLabel {
+    color: #49443d;
+    font-size: 12px;
+    font-weight: bold;
+}
+
 QFrame#inputFrame {
-    background-color: #ffffff;
-    border: 2px solid #d9d9d9;
+    background-color: #faf6ed;
+    border: 1px solid #d8ccb7;
     border-radius: 10px;
-    padding: 0 8px;
-    min-height: 42px;
+    min-height: 44px;
+}
+
+QFrame#inputFrame[active="true"] {
+    background-color: #ffffff;
+    border: 1px solid #42755f;
 }
 
 QFrame#inputFrame[error="true"] {
-    border: 2px solid #ff4d4f;
-}
-
-QFrame#inputFrame[error="true"] QLineEdit {
-    color: #ff4d4f;
+    background-color: #fff8f5;
+    border: 1px solid #c95e4a;
 }
 
 QLineEdit {
     background-color: transparent;
     border: none;
-    color: #1a1a1a;
-    font-size: 15px;
-    padding: 4px 14px;
+    color: #292621;
+    font-size: 14px;
+    padding: 0 8px;
+    selection-background-color: #8cab7d;
 }
 
-QLabel#iconLabel {
-    background-color: transparent;
-    padding: 0 4px 0 8px;
-}
-
-QPushButton#pwdToggleBtn {
+QPushButton#passwordToggle {
     background-color: transparent;
     border: none;
-    color: #8c8c8c;
-    font-size: 18px;
-    padding: 4px 8px;
-    min-width: 32px;
-    max-width: 32px;
+    color: #6f796f;
+    font-size: 12px;
+    min-width: 42px;
+    padding: 7px 8px;
 }
 
-QPushButton#pwdToggleBtn:hover {
-    color: #1890ff;
+QPushButton#passwordToggle:hover {
+    color: #2f6651;
 }
 
-QPushButton#loginBtn {
-    background-color: #1890ff;
-    color: white;
+QLabel#errorLabel {
+    color: #bd4f3d;
+    font-size: 12px;
+    min-height: 18px;
+}
+
+QPushButton#loginButton {
+    background-color: #315f4c;
+    color: #fffdf7;
     border: none;
-    border-radius: 10px;
-    font-size: 16px;
+    border-radius: 11px;
+    min-height: 46px;
+    font-size: 14px;
     font-weight: bold;
-    min-height: 48px;
-    letter-spacing: 2px;
+    letter-spacing: 3px;
 }
 
-QPushButton#loginBtn:hover {
-    background-color: #40a9ff;
+QPushButton#loginButton:hover {
+    background-color: #3d745d;
 }
 
-QPushButton#loginBtn:pressed {
-    background-color: #096dd9;
+QPushButton#loginButton:pressed {
+    background-color: #244c3c;
 }
 
-QPushButton#loginBtn:focus {
-    background-color: #1890ff;
+QPushButton#loginButton:focus {
+    border: 2px solid #9eb49c;
 }
 
-QLabel#footerLabel {
-    color: rgba(255, 255, 255, 0.6);
+QLabel#tipLabel {
+    color: #948a7b;
     font-size: 11px;
 }
 """
 
 
+class FieldIcon(QWidget):
+    """Small line icon that follows the storefront palette."""
+
+    def __init__(self, icon_type, parent=None):
+        super().__init__(parent)
+        self.icon_type = icon_type
+        self.setFixedSize(28, 28)
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+        painter.setPen(QPen(QColor("#547064"), 1.7, Qt.SolidLine, Qt.RoundCap))
+        painter.setBrush(Qt.NoBrush)
+
+        if self.icon_type == "user":
+            painter.drawEllipse(QRectF(10, 5, 8, 8))
+            painter.drawArc(QRectF(6.5, 14, 15, 11), 0, 180 * 16)
+        else:
+            painter.drawEllipse(QRectF(5, 8, 9, 9))
+            painter.drawLine(QPointF(13, 14), QPointF(22, 14))
+            painter.drawLine(QPointF(19, 14), QPointF(19, 18))
+            painter.drawLine(QPointF(22, 14), QPointF(22, 17))
+
+
+class StorefrontIllustration(QWidget):
+    """Resource-free storefront artwork that scales cleanly on HiDPI screens."""
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+
+        width = self.width()
+        height = self.height()
+        painter.translate((width - 350) / 2, (height - 430) / 2)
+
+        # Soft sun and ground keep the illustration from looking like a flat icon.
+        painter.setPen(Qt.NoPen)
+        painter.setBrush(QColor(255, 246, 212, 150))
+        painter.drawEllipse(QRectF(18, 12, 290, 290))
+        painter.setBrush(QColor("#d8cfb8"))
+        painter.drawEllipse(QRectF(31, 391, 288, 18))
+
+        # Roof, shop body and sign board.
+        painter.setBrush(QColor("#315f4c"))
+        painter.drawPolygon(QPolygonF([
+            QPointF(54, 120), QPointF(175, 45), QPointF(296, 120)
+        ]))
+        painter.setBrush(QColor("#fffaf0"))
+        painter.drawRoundedRect(QRectF(61, 115, 228, 280), 8, 8)
+
+        painter.setBrush(QColor("#f4d99b"))
+        painter.drawRoundedRect(QRectF(103, 74, 144, 54), 9, 9)
+        painter.setPen(QPen(QColor("#315f4c"), 2))
+        painter.drawRoundedRect(QRectF(103, 74, 144, 54), 9, 9)
+        painter.setFont(QFont("Microsoft YaHei", 15, QFont.Bold))
+        painter.drawText(QRectF(103, 74, 144, 54), Qt.AlignCenter, "小妖杂货铺")
+
+        # Striped awning.
+        painter.setPen(Qt.NoPen)
+        painter.setBrush(QColor("#b85f45"))
+        painter.drawRoundedRect(QRectF(45, 137, 260, 50), 7, 7)
+        painter.setBrush(QColor("#f5d895"))
+        for x in range(71, 280, 52):
+            painter.drawRect(QRectF(x, 137, 26, 50))
+        painter.setBrush(QColor("#fffaf0"))
+        painter.drawRect(QRectF(61, 177, 228, 12))
+
+        # Window, shelves and jars.
+        painter.setBrush(QColor("#b9d6cc"))
+        painter.drawRoundedRect(QRectF(80, 210, 108, 119), 4, 4)
+        painter.setPen(QPen(QColor("#315f4c"), 4))
+        painter.drawRect(QRectF(80, 210, 108, 119))
+        painter.drawLine(QPointF(134, 211), QPointF(134, 329))
+        painter.drawLine(QPointF(82, 269), QPointF(186, 269))
+
+        painter.setPen(Qt.NoPen)
+        jar_colors = ["#cf7456", "#e6b85d", "#6f947b"]
+        for index, color in enumerate(jar_colors):
+            x = 91 + index * 29
+            painter.setBrush(QColor(color))
+            painter.drawRoundedRect(QRectF(x, 236, 20, 25), 4, 4)
+            painter.setBrush(QColor("#f8ecd0"))
+            painter.drawRect(QRectF(x + 3, 232, 14, 5))
+
+        # Door with a warm lamp and tiny welcome sign.
+        painter.setBrush(QColor("#8e543f"))
+        painter.drawRoundedRect(QRectF(207, 210, 62, 185), 4, 4)
+        painter.setBrush(QColor("#f4d99b"))
+        painter.drawRoundedRect(QRectF(216, 226, 44, 67), 3, 3)
+        painter.setBrush(QColor("#dcae56"))
+        painter.drawEllipse(QRectF(249, 307, 7, 7))
+        painter.setBrush(QColor("#fff7df"))
+        painter.drawRoundedRect(QRectF(214, 331, 48, 31), 4, 4)
+        painter.setPen(QColor("#604c3d"))
+        painter.setFont(QFont("Microsoft YaHei", 9, QFont.Bold))
+        painter.drawText(QRectF(214, 331, 48, 31), Qt.AlignCenter, "营业中")
+
+        # A few plants make the storefront feel lived-in.
+        painter.setPen(Qt.NoPen)
+        painter.setBrush(QColor("#a95c42"))
+        painter.drawRoundedRect(QRectF(43, 358, 40, 37), 3, 3)
+        painter.setBrush(QColor("#5b8268"))
+        for rect in (
+            QRectF(39, 330, 25, 39), QRectF(57, 320, 23, 48),
+            QRectF(69, 338, 21, 32),
+        ):
+            painter.drawEllipse(rect)
+
+
 class LoginDialog(QDialog):
+    Accepted = QDialog.DialogCode.Accepted
+
     def __init__(self, auth_service, parent=None):
         super().__init__(parent)
         self.auth_service = auth_service
-        self.setWindowTitle("小妖记账 - 登录")
-        self.setFixedSize(440, 560)
-        
-        # 设置对象名称，用于样式选择器
-        self.setObjectName("LoginDialog")
-        
-        # 应用登录页面专用样式
-        self.setStyleSheet(LOGIN_STYLE)
-        
-        # 设置窗口标志，确保背景透明生效
-        self.setAttribute(Qt.WA_TranslucentBackground, False)
-        
-        self.setup_ui()
         self.password_visible = False
 
+        self.setObjectName("LoginDialog")
+        self.setWindowTitle("小妖杂货铺 - 店主登录")
+        self.setFixedSize(860, 560)
+        self.setStyleSheet(LOGIN_STYLE)
+        self.setup_ui()
+
     def paintEvent(self, event):
-        # 绘制渐变背景
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
-        
         gradient = QLinearGradient(0, 0, self.width(), self.height())
-        gradient.setColorAt(0, QColor("#667eea"))
-        gradient.setColorAt(1, QColor("#764ba2"))
-        
+        gradient.setColorAt(0, QColor("#f5eddd"))
+        gradient.setColorAt(1, QColor("#e6dbc5"))
         painter.fillRect(self.rect(), gradient)
 
+        painter.setPen(Qt.NoPen)
+        painter.setBrush(QColor(49, 95, 76, 18))
+        painter.drawEllipse(QRectF(-90, 355, 330, 260))
+        painter.setBrush(QColor(184, 95, 69, 18))
+        painter.drawEllipse(QRectF(680, -100, 270, 270))
+
     def setup_ui(self):
-        # 主布局
-        main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(40, 50, 40, 30)
-        main_layout.setSpacing(0)
-        
-        # 顶部 Logo 区域
-        logo_layout = QVBoxLayout()
-        logo_layout.setAlignment(Qt.AlignCenter)
-        logo_layout.setSpacing(12)
-        
-        logo_icon = QLabel("💰")
-        logo_icon.setFont(QFont("", 56))
-        logo_icon.setAlignment(Qt.AlignCenter)
-        logo_icon.setStyleSheet("background-color: transparent; color: white;")
-        logo_layout.addWidget(logo_icon)
-        
-        title_label = QLabel("小妖记账")
-        title_label.setObjectName("titleLabel")
-        title_label.setAlignment(Qt.AlignCenter)
-        logo_layout.addWidget(title_label)
-        
-        subtitle_label = QLabel("欢迎使用个人财务管理")
-        subtitle_label.setObjectName("subtitleLabel")
-        subtitle_label.setAlignment(Qt.AlignCenter)
-        logo_layout.addWidget(subtitle_label)
-        
-        logo_layout.addSpacing(24)
-        main_layout.addLayout(logo_layout)
-        
-        # 白色卡片登录表单
-        card_frame = QFrame()
-        card_frame.setObjectName("cardFrame")
-        card_layout = QVBoxLayout(card_frame)
-        card_layout.setContentsMargins(24, 32, 24, 32)
-        card_layout.setSpacing(50)
-        
-        # 用户名输入区域
-        self.username_frame = QFrame()
-        self.username_frame.setObjectName("inputFrame")
-        username_layout = QHBoxLayout(self.username_frame)
-        username_layout.setContentsMargins(0, 0, 0, 0)
-        username_layout.setSpacing(0)
-        
-        username_icon = QLabel("👤")
-        username_icon.setObjectName("iconLabel")
-        username_icon.setFont(QFont("", 12))
-        username_layout.addWidget(username_icon)
-        
-        self.username_input = QLineEdit()
-        self.username_input.setPlaceholderText("请输入用户名...")
-        self.username_input.setFont(QFont("", 12))
+        main_layout = QHBoxLayout(self)
+        main_layout.setContentsMargins(42, 36, 42, 36)
+        main_layout.setSpacing(42)
+
+        illustration = StorefrontIllustration()
+        illustration.setMinimumWidth(390)
+        main_layout.addWidget(illustration, 1)
+
+        card = QFrame()
+        card.setObjectName("loginCard")
+        card.setFixedWidth(350)
+        card_layout = QVBoxLayout(card)
+        card_layout.setContentsMargins(34, 34, 34, 30)
+        card_layout.setSpacing(0)
+
+        eyebrow = QLabel("SHOPKEEPER  ·  LOGIN")
+        eyebrow.setObjectName("eyebrowLabel")
+        card_layout.addWidget(eyebrow)
+        card_layout.addSpacing(8)
+
+        title = QLabel("欢迎回来")
+        title.setObjectName("titleLabel")
+        card_layout.addWidget(title)
+        card_layout.addSpacing(5)
+
+        subtitle = QLabel("登录后继续打理你的每一笔账目")
+        subtitle.setObjectName("subtitleLabel")
+        card_layout.addWidget(subtitle)
+        card_layout.addSpacing(27)
+
+        username_label = QLabel("店主账号")
+        username_label.setObjectName("fieldLabel")
+        card_layout.addWidget(username_label)
+        card_layout.addSpacing(7)
+
+        self.username_frame, self.username_input = self.create_input("user")
+        self.username_input.setPlaceholderText("请输入用户名")
         self.username_input.setFocusPolicy(Qt.StrongFocus)
         self.username_input.textChanged.connect(self.clear_username_error)
-        username_layout.addWidget(self.username_input)
-        
         card_layout.addWidget(self.username_frame)
-        
-        # 密码输入区域
-        self.password_frame = QFrame()
-        self.password_frame.setObjectName("inputFrame")
-        password_layout = QHBoxLayout(self.password_frame)
-        password_layout.setContentsMargins(0, 0, 0, 0)
-        password_layout.setSpacing(0)
-        
-        password_icon = QLabel("🔒")
-        password_icon.setObjectName("iconLabel")
-        password_icon.setFont(QFont("", 14))
-        password_layout.addWidget(password_icon)
-        
-        self.password_input = QLineEdit()
-        self.password_input.setPlaceholderText("请输入密码...")
+        card_layout.addSpacing(16)
+
+        password_label = QLabel("通行口令")
+        password_label.setObjectName("fieldLabel")
+        card_layout.addWidget(password_label)
+        card_layout.addSpacing(7)
+
+        self.password_frame, self.password_input = self.create_input("key")
+        self.password_input.setPlaceholderText("请输入密码")
         self.password_input.setEchoMode(QLineEdit.Password)
-        self.password_input.setFont(QFont("", 13))
         self.password_input.returnPressed.connect(self.on_login)
         self.password_input.textChanged.connect(self.clear_password_error)
-        password_layout.addWidget(self.password_input)
-        
-        # 密码显示切换按钮
-        self.pwd_toggle_btn = QPushButton("👁")
-        self.pwd_toggle_btn.setObjectName("pwdToggleBtn")
-        self.pwd_toggle_btn.setCursor(Qt.PointingHandCursor)
-        self.pwd_toggle_btn.clicked.connect(self.toggle_password_visibility)
-        password_layout.addWidget(self.pwd_toggle_btn)
-        
+
+        self.password_toggle = QPushButton("显示")
+        self.password_toggle.setObjectName("passwordToggle")
+        self.password_toggle.setCursor(Qt.PointingHandCursor)
+        self.password_toggle.setFocusPolicy(Qt.NoFocus)
+        self.password_toggle.clicked.connect(self.toggle_password_visibility)
+        self.password_frame.layout().addWidget(self.password_toggle)
         card_layout.addWidget(self.password_frame)
-        
-        # 添加间距
-        card_layout.addSpacing(12)
-        
-        # 登录按钮
-        login_btn = QPushButton("登 录")
-        login_btn.setObjectName("loginBtn")
-        login_btn.setCursor(Qt.PointingHandCursor)
-        login_btn.clicked.connect(self.on_login)
-        card_layout.addWidget(login_btn)
-        
-        main_layout.addWidget(card_frame)
-        
-        # 添加弹性空间
-        main_layout.addStretch()
-        
-        # 底部页脚
-        footer_label = QLabel("© 2026 Account Book  |  版本 1.0")
-        footer_label.setObjectName("footerLabel")
-        footer_label.setAlignment(Qt.AlignCenter)
-        main_layout.addWidget(footer_label)
-        
-        # 设置焦点到用户名输入框
+        card_layout.addSpacing(5)
+
+        self.error_label = QLabel()
+        self.error_label.setObjectName("errorLabel")
+        card_layout.addWidget(self.error_label)
+        card_layout.addSpacing(8)
+
+        login_button = QPushButton("进入店铺")
+        login_button.setObjectName("loginButton")
+        login_button.setCursor(Qt.PointingHandCursor)
+        login_button.clicked.connect(self.on_login)
+        card_layout.addWidget(login_button)
+        card_layout.addStretch()
+
+        tip = QLabel("认真记下日常，也收藏生活的小确幸")
+        tip.setObjectName("tipLabel")
+        tip.setAlignment(Qt.AlignCenter)
+        card_layout.addWidget(tip)
+
+        main_layout.addWidget(card)
         self.username_input.setFocus()
 
+    def create_input(self, icon_type):
+        frame = QFrame()
+        frame.setObjectName("inputFrame")
+        frame.setProperty("active", False)
+        frame.setProperty("error", False)
+
+        layout = QHBoxLayout(frame)
+        layout.setContentsMargins(10, 2, 8, 2)
+        layout.setSpacing(3)
+        layout.addWidget(FieldIcon(icon_type))
+
+        line_edit = QLineEdit()
+        line_edit.installEventFilter(self)
+        layout.addWidget(line_edit)
+        return frame, line_edit
+
+    def eventFilter(self, watched, event):
+        username_input = getattr(self, "username_input", None)
+        password_input = getattr(self, "password_input", None)
+        if watched in (username_input, password_input):
+            if event.type() in (QEvent.FocusIn, QEvent.FocusOut):
+                frame = (
+                    self.username_frame
+                    if watched is username_input
+                    else self.password_frame
+                )
+                frame.setProperty("active", event.type() == QEvent.FocusIn)
+                self.refresh_style(frame)
+        return super().eventFilter(watched, event)
+
     def toggle_password_visibility(self):
-        """切换密码显示/隐藏"""
-        if self.password_visible:
-            self.password_input.setEchoMode(QLineEdit.Password)
-            self.pwd_toggle_btn.setText("👁")
-            self.password_visible = False
-        else:
-            self.password_input.setEchoMode(QLineEdit.Normal)
-            self.pwd_toggle_btn.setText("🙈")
-            self.password_visible = True
+        self.password_visible = not self.password_visible
+        echo_mode = QLineEdit.Normal if self.password_visible else QLineEdit.Password
+        self.password_input.setEchoMode(echo_mode)
+        self.password_toggle.setText("隐藏" if self.password_visible else "显示")
 
-    def shake_frame(self, frame):
-        """对输入框执行抖动动画"""
-        original_pos = frame.pos().x()
-        anim = QSequentialAnimationGroup(frame)
-        
-        offsets = [-12, 10, -8, 6, -4, 2, 0]
-        for offset in offsets:
-            a = QPropertyAnimation(frame, b"pos")
-            a.setDuration(50)
-            a.setEasingCurve(QEasingCurve.OutQuad)
-            a.setStartValue(frame.pos())
-            a.setEndValue(frame.pos() + type(frame.pos())(offset, 0))
-            anim.addAnimation(a)
-        
-        anim.start()
-        self._shake_anim = anim
+    @staticmethod
+    def refresh_style(widget):
+        widget.style().unpolish(widget)
+        widget.style().polish(widget)
+        widget.update()
 
-    def set_error(self, frame):
-        """设置输入框错误状态"""
+    def set_error(self, frame, message):
         frame.setProperty("error", True)
-        frame.style().unpolish(frame)
-        frame.style().polish(frame)
-        self.shake_frame(frame)
+        self.refresh_style(frame)
+        self.error_label.setText(message)
 
     def clear_error(self, frame):
-        """清除输入框错误状态"""
-        frame.setProperty("error", False)
-        frame.style().unpolish(frame)
-        frame.style().polish(frame)
+        if frame.property("error"):
+            frame.setProperty("error", False)
+            self.refresh_style(frame)
+        if not self.username_frame.property("error") and not self.password_frame.property("error"):
+            self.error_label.clear()
 
     def clear_username_error(self):
         self.clear_error(self.username_frame)
@@ -293,24 +411,27 @@ class LoginDialog(QDialog):
         self.clear_error(self.password_frame)
 
     def on_login(self):
-        """登录处理"""
         username = self.username_input.text().strip()
         password = self.password_input.text().strip()
-        
+
         if not username:
-            self.set_error(self.username_frame)
+            self.set_error(self.username_frame, "请填写店主账号")
             self.username_input.setFocus()
             return
-        
+
         if not password:
-            self.set_error(self.password_frame)
+            self.set_error(self.password_frame, "请填写通行口令")
             self.password_input.setFocus()
             return
-        
+
         if self.auth_service.login(username, password):
             self.accept()
-        else:
-            self.set_error(self.username_frame)
-            self.set_error(self.password_frame)
-            self.password_input.clear()
-            self.password_input.setFocus()
+            return
+
+        self.password_input.clear()
+        self.username_frame.setProperty("error", True)
+        self.password_frame.setProperty("error", True)
+        self.refresh_style(self.username_frame)
+        self.refresh_style(self.password_frame)
+        self.error_label.setText("账号或口令不正确，请重新检查")
+        self.password_input.setFocus()

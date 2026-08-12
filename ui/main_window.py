@@ -29,7 +29,7 @@ class MainWindow(QMainWindow):
         self.auth_service = auth_service
         self.session = session
         self._logged_out = False
-        self.setWindowTitle("记账本 - 个人财务管理")
+        self.setWindowTitle("小妖杂货铺 - 账房管理")
         self.setMinimumSize(1000, 650)
         self.resize(1100, 700)
         self.setup_ui()
@@ -39,6 +39,7 @@ class MainWindow(QMainWindow):
 
     def setup_ui(self):
         central = QWidget()
+        central.setObjectName("mainWorkspace")
         self.setCentralWidget(central)
         main_layout = QHBoxLayout(central)
         main_layout.setContentsMargins(0, 0, 0, 0)
@@ -67,6 +68,7 @@ class MainWindow(QMainWindow):
         content_layout.addWidget(self.stacked)
 
         content_widget = QWidget()
+        content_widget.setObjectName("contentWorkspace")
         content_widget.setLayout(content_layout)
         main_layout.addWidget(content_widget)
 
@@ -78,18 +80,22 @@ class MainWindow(QMainWindow):
         layout.setContentsMargins(0, 16, 0, 16)
         layout.setSpacing(4)
 
-        logo = QLabel("📒 记账本")
-        logo.setAlignment(Qt.AlignCenter)
-        logo.setFont(QFont("", 18, QFont.Bold))
-        logo.setStyleSheet("color: #1a1a1a; padding: 16px;")
-        layout.addWidget(logo)
-        layout.addSpacing(16)
+        brand = QLabel("小妖杂货铺")
+        brand.setObjectName("sidebarBrand")
+        brand.setAlignment(Qt.AlignCenter)
+        layout.addWidget(brand)
+
+        brand_subtitle = QLabel("GROCERY  ·  LEDGER")
+        brand_subtitle.setObjectName("sidebarSubtitle")
+        brand_subtitle.setAlignment(Qt.AlignCenter)
+        layout.addWidget(brand_subtitle)
+        layout.addSpacing(28)
 
         self.nav_buttons = []
         nav_items = [
-            ("📊 仪表盘", "dashboard"),
-            ("📋 明细", "transactions"),
-            ("📈 统计", "statistics"),
+            ("今日概览", "dashboard"),
+            ("收支明细", "transactions"),
+            ("经营统计", "statistics"),
         ]
         for idx, (text, _) in enumerate(nav_items):
             btn = QPushButton(text)
@@ -101,26 +107,28 @@ class MainWindow(QMainWindow):
             self.nav_buttons.append(btn)
 
         layout.addStretch()
+
+        status = QLabel("●  今日营业中")
+        status.setObjectName("storeStatus")
+        status.setAlignment(Qt.AlignCenter)
+        layout.addWidget(status)
         return sidebar
 
     def create_header(self):
         header = QFrame()
+        header.setObjectName("mainHeader")
         header.setFixedHeight(56)
-        header.setStyleSheet("background-color: #ffffff; border-bottom: 1px solid #f0f0f0;")
         layout = QHBoxLayout(header)
         layout.setContentsMargins(24, 0, 24, 0)
 
-        self.page_title = QLabel("仪表盘")
-        self.page_title.setFont(QFont("", 16, QFont.Bold))
-        self.page_title.setStyleSheet("color: #1a1a1a;")
+        self.page_title = QLabel("今日概览")
+        self.page_title.setObjectName("mainPageTitle")
         layout.addWidget(self.page_title)
 
         layout.addStretch()
 
         self.clock_label = QLabel()
-        self.clock_label.setStyleSheet(
-            "color: #8c8c8c; font-size: 13px; margin-right: 16px;"
-        )
+        self.clock_label.setObjectName("headerClock")
         self.clock_label.setMinimumWidth(166)
         self.clock_label.setAlignment(Qt.AlignCenter)
         layout.addWidget(self.clock_label)
@@ -134,56 +142,14 @@ class MainWindow(QMainWindow):
         separator = QFrame()
         separator.setFrameShape(QFrame.VLine)
         separator.setFixedHeight(24)
-        separator.setStyleSheet("color: #d9d9d9;")
+        separator.setObjectName("headerSeparator")
         layout.addWidget(separator)
 
-        self.account_btn = QPushButton(f"👤 {self.session.username}  ▾")
+        self.account_btn = QPushButton(f"店主 · {self.session.username}  ▾")
+        self.account_btn.setObjectName("accountButton")
         self.account_btn.setCursor(Qt.PointingHandCursor)
-        self.account_btn.setStyleSheet("""
-            QPushButton {
-                background-color: transparent;
-                color: #1a1a1a;
-                font-size: 14px;
-                border: 1px solid #d9d9d9;
-                border-radius: 6px;
-                padding: 6px 16px;
-                margin-left: 8px;
-            }
-            QPushButton:hover {
-                background-color: #f5f5f5;
-                border-color: #1890ff;
-                color: #1890ff;
-            }
-            QPushButton::menu-indicator {
-                image: none;
-                width: 0;
-            }
-        """)
         account_menu = QMenu(self.account_btn)
         account_menu.setObjectName("accountMenu")
-        account_menu.setStyleSheet("""
-            QMenu#accountMenu {
-                background-color: #ffffff;
-                border: 1px solid #e8e8e8;
-                border-radius: 8px;
-                padding: 6px;
-            }
-            QMenu#accountMenu::item {
-                color: #1a1a1a;
-                padding: 9px 28px 9px 14px;
-                border-radius: 6px;
-                font-size: 13px;
-            }
-            QMenu#accountMenu::item:selected {
-                background-color: #e6f7ff;
-                color: #1890ff;
-            }
-            QMenu#accountMenu::separator {
-                height: 1px;
-                background-color: #f0f0f0;
-                margin: 5px 8px;
-            }
-        """)
         manage_action = account_menu.addAction("账号管理")
         manage_action.triggered.connect(self.on_account_btn_click)
         account_menu.addSeparator()
@@ -218,7 +184,7 @@ class MainWindow(QMainWindow):
             self.close()
 
     def on_nav_clicked(self, idx):
-        titles = ["仪表盘", "明细", "统计"]
+        titles = ["今日概览", "收支明细", "经营统计"]
         for i, btn in enumerate(self.nav_buttons):
             btn.setChecked(i == idx)
         self.stacked.setCurrentIndex(idx)
@@ -239,7 +205,7 @@ class MainWindow(QMainWindow):
 
         overview_header = QHBoxLayout()
         overview_header.setSpacing(10)
-        overview_title = QLabel("财务概览")
+        overview_title = QLabel("本月账房")
         overview_title.setObjectName("dashboard_title")
         overview_header.addWidget(overview_title)
         overview_header.addStretch()
@@ -259,10 +225,10 @@ class MainWindow(QMainWindow):
         cards_layout = QHBoxLayout()
         cards_layout.setSpacing(12)
 
-        self.income_card = self.create_dashboard_card("收入", "income")
-        self.expense_card = self.create_dashboard_card("支出", "expense")
-        self.balance_card = self.create_dashboard_card("结余", "balance")
-        self.count_card = self.create_dashboard_card("交易笔数", "count")
+        self.income_card = self.create_dashboard_card("本月进账", "income")
+        self.expense_card = self.create_dashboard_card("本月支出", "expense")
+        self.balance_card = self.create_dashboard_card("账面结余", "balance")
+        self.count_card = self.create_dashboard_card("记账笔数", "count")
 
         cards_layout.addWidget(self.income_card)
         cards_layout.addWidget(self.expense_card)
@@ -285,7 +251,7 @@ class MainWindow(QMainWindow):
         self.dash_chart.setAnimationOptions(QChart.SeriesAnimations)
         self.dash_chart.setBackgroundVisible(False)
         self.dash_chart.legend().setAlignment(Qt.AlignBottom)
-        self.dash_chart.legend().setLabelColor(QColor("#595959"))
+        self.dash_chart.legend().setLabelColor(QColor("#7c7468"))
         self.dash_chart_view = QChartView(self.dash_chart)
         self.dash_chart_view.setRenderHint(QPainter.Antialiasing)
         self.dash_chart_view.setMinimumHeight(160)
@@ -298,7 +264,7 @@ class MainWindow(QMainWindow):
         category_layout = QVBoxLayout(category_panel)
         category_layout.setContentsMargins(16, 14, 16, 12)
         category_layout.setSpacing(8)
-        category_title = QLabel("本月支出构成")
+        category_title = QLabel("本月货架分类")
         category_title.setObjectName("dashboard_section_title")
         category_layout.addWidget(category_title)
         self.dash_category_layout = QVBoxLayout()
@@ -309,7 +275,7 @@ class MainWindow(QMainWindow):
         layout.addLayout(insights_layout)
 
         recent_header = QHBoxLayout()
-        recent_title = QLabel("最近交易")
+        recent_title = QLabel("最近账目")
         recent_title.setObjectName("dashboard_section_title")
         recent_header.addWidget(recent_title)
         recent_header.addStretch()
@@ -455,10 +421,10 @@ class MainWindow(QMainWindow):
         expense_line = QLineSeries()
         income_line.setName("收入")
         expense_line.setName("支出")
-        income_line.setColor(QColor("#52c41a"))
-        expense_line.setColor(QColor("#f5222d"))
-        income_line.setPen(QPen(QColor("#52c41a"), 2.5))
-        expense_line.setPen(QPen(QColor("#f5222d"), 2.5))
+        income_line.setColor(QColor("#5e8a69"))
+        expense_line.setColor(QColor("#b85f45"))
+        income_line.setPen(QPen(QColor("#5e8a69"), 2.5))
+        expense_line.setPen(QPen(QColor("#b85f45"), 2.5))
         income_line.setPointsVisible(True)
         expense_line.setPointsVisible(True)
         income_line.setMarkerSize(7)
@@ -474,10 +440,10 @@ class MainWindow(QMainWindow):
         expense_current = QScatterSeries()
         income_current.append(5, income_values[-1] / divisor)
         expense_current.append(5, expense_values[-1] / divisor)
-        income_current.setColor(QColor("#52c41a"))
-        expense_current.setColor(QColor("#f5222d"))
-        income_current.setBorderColor(QColor("#ffffff"))
-        expense_current.setBorderColor(QColor("#ffffff"))
+        income_current.setColor(QColor("#5e8a69"))
+        expense_current.setColor(QColor("#b85f45"))
+        income_current.setBorderColor(QColor("#fffdf8"))
+        expense_current.setBorderColor(QColor("#fffdf8"))
         income_current.setMarkerSize(12)
         expense_current.setMarkerSize(12)
 
@@ -495,6 +461,10 @@ class MainWindow(QMainWindow):
         scaled_maximum = maximum / divisor
         value_axis.setRange(0, scaled_maximum * 1.15 if maximum else 100)
         value_axis.setTickCount(5)
+        for axis in (category_axis, value_axis):
+            axis.setLabelsColor(QColor("#7c7468"))
+            axis.setGridLineColor(QColor("#e9e0d1"))
+            axis.setLinePenColor(QColor("#d8ccb7"))
         self.dash_chart.addAxis(category_axis, Qt.AlignBottom)
         self.dash_chart.addAxis(value_axis, Qt.AlignLeft)
         for series in chart_series:
@@ -568,9 +538,9 @@ class MainWindow(QMainWindow):
         type_item = QTableWidgetItem(type_text)
         type_item.setTextAlignment(Qt.AlignCenter)
         if t['type'] == 'income':
-            type_item.setForeground(QColor("#52c41a"))
+            type_item.setForeground(QColor("#5e8a69"))
         else:
-            type_item.setForeground(QColor("#f5222d"))
+            type_item.setForeground(QColor("#b85f45"))
         table.setItem(row, 1, type_item)
 
         cat_text = f"{t.get('category_icon', '')} {t.get('category_name', '')}"
@@ -582,9 +552,9 @@ class MainWindow(QMainWindow):
         amount_item = QTableWidgetItem(amount_text)
         amount_item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
         if t['type'] == 'income':
-            amount_item.setForeground(QColor("#52c41a"))
+            amount_item.setForeground(QColor("#5e8a69"))
         else:
-            amount_item.setForeground(QColor("#f5222d"))
+            amount_item.setForeground(QColor("#b85f45"))
         amount_item.setFont(QFont("", 11, QFont.Bold))
         table.setItem(row, 3, amount_item)
 
@@ -619,9 +589,9 @@ class MainWindow(QMainWindow):
         self.tx_type_filter = QComboBox()
         self.tx_type_filter.setObjectName("txTypeFilter")
         self.tx_type_filter.addItems(["全部", "收入", "支出"])
-        self.tx_type_filter.setItemData(0, QColor("#595959"), Qt.ForegroundRole)
-        self.tx_type_filter.setItemData(1, QColor("#389e0d"), Qt.ForegroundRole)
-        self.tx_type_filter.setItemData(2, QColor("#cf1322"), Qt.ForegroundRole)
+        self.tx_type_filter.setItemData(0, QColor("#7c7468"), Qt.ForegroundRole)
+        self.tx_type_filter.setItemData(1, QColor("#5e8a69"), Qt.ForegroundRole)
+        self.tx_type_filter.setItemData(2, QColor("#b85f45"), Qt.ForegroundRole)
         self.tx_type_filter.setMinimumWidth(92)
         self.tx_type_filter.setMaximumWidth(118)
         self.tx_type_filter.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
@@ -645,7 +615,7 @@ class MainWindow(QMainWindow):
         filter_layout.addWidget(cat_label)
         filter_layout.addWidget(self.tx_cat_filter, 2)
 
-        query_btn = QPushButton("🔍 查询")
+        query_btn = QPushButton("查询")
         query_btn.setObjectName("query_btn")
         query_btn.setCursor(Qt.PointingHandCursor)
         query_btn.setMinimumWidth(72)
@@ -706,9 +676,9 @@ class MainWindow(QMainWindow):
         total_expense = sum(t['amount'] for t in transactions if t['type'] == 'expense')
         self.tx_summary_label.setText(
             f"共 {len(transactions)} 笔  |  "
-            f"收入: <span style='color:#52c41a;font-weight:bold'>¥ {total_income:,.2f}</span>  |  "
-            f"支出: <span style='color:#f5222d;font-weight:bold'>¥ {total_expense:,.2f}</span>  |  "
-            f"结余: <span style='color:#1890ff;font-weight:bold'>¥ {total_income - total_expense:,.2f}</span>"
+            f"进账: <span style='color:#5e8a69;font-weight:bold'>¥ {total_income:,.2f}</span>  |  "
+            f"支出: <span style='color:#b85f45;font-weight:bold'>¥ {total_expense:,.2f}</span>  |  "
+            f"结余: <span style='color:#315f4c;font-weight:bold'>¥ {total_income - total_expense:,.2f}</span>"
         )
 
         self.tx_table.setRowCount(len(transactions))
@@ -723,7 +693,7 @@ class MainWindow(QMainWindow):
         type_text = "收入" if t['type'] == 'income' else "支出"
         type_item = QTableWidgetItem(type_text)
         type_item.setTextAlignment(Qt.AlignCenter)
-        type_item.setForeground(QColor("#52c41a" if t['type'] == 'income' else "#f5222d"))
+        type_item.setForeground(QColor("#5e8a69" if t['type'] == 'income' else "#b85f45"))
         self.tx_table.setItem(row, 1, type_item)
 
         cat_text = f"{t.get('category_icon', '')} {t.get('category_name', '')}"
@@ -734,20 +704,20 @@ class MainWindow(QMainWindow):
         amount_text = f"¥ {t['amount']:,.2f}"
         amount_item = QTableWidgetItem(amount_text)
         amount_item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter)
-        amount_item.setForeground(QColor("#52c41a" if t['type'] == 'income' else "#f5222d"))
+        amount_item.setForeground(QColor("#5e8a69" if t['type'] == 'income' else "#b85f45"))
         amount_item.setFont(QFont("", 11, QFont.Bold))
         self.tx_table.setItem(row, 3, amount_item)
 
         note_item = QTableWidgetItem(t.get('note', ''))
         self.tx_table.setItem(row, 4, note_item)
 
-        edit_btn = QPushButton("✏️ 编辑")
+        edit_btn = QPushButton("编辑")
         edit_btn.setObjectName("edit_btn")
         edit_btn.setCursor(Qt.PointingHandCursor)
         edit_btn.clicked.connect(lambda checked, t=t: self.on_edit_transaction(t))
         self.tx_table.setCellWidget(row, 5, edit_btn)
 
-        del_btn = QPushButton("🗑 删除")
+        del_btn = QPushButton("删除")
         del_btn.setObjectName("delete_btn")
         del_btn.setCursor(Qt.PointingHandCursor)
         del_btn.clicked.connect(lambda checked, item=t: self.on_delete_transaction(item))
@@ -815,7 +785,7 @@ class MainWindow(QMainWindow):
         self.stat_period.setFixedHeight(38)
         header.addWidget(self.stat_period, 2)
 
-        query_btn = QPushButton("🔍 查询")
+        query_btn = QPushButton("查询")
         query_btn.setObjectName("query_btn")
         query_btn.setCursor(Qt.PointingHandCursor)
         query_btn.setMinimumWidth(72)
@@ -828,7 +798,7 @@ class MainWindow(QMainWindow):
 
         stat_cards = QHBoxLayout()
         stat_cards.setSpacing(16)
-        self.stat_income_card = self.create_stat_card("总收入", "0.00", "income")
+        self.stat_income_card = self.create_stat_card("总进账", "0.00", "income")
         self.stat_expense_card = self.create_stat_card("总支出", "0.00", "expense")
         self.stat_balance_card = self.create_stat_card("结余", "0.00", "balance")
         stat_cards.addWidget(self.stat_income_card)
@@ -841,26 +811,12 @@ class MainWindow(QMainWindow):
         tabs_layout = QHBoxLayout()
         tabs_layout.setSpacing(8)
         self.stat_type_group = QButtonGroup(self)
-        self.stat_tab_expense = QPushButton("📤 支出分类")
-        self.stat_tab_income = QPushButton("📥 收入分类")
+        self.stat_tab_expense = QPushButton("支出分类")
+        self.stat_tab_income = QPushButton("收入分类")
         for btn in [self.stat_tab_expense, self.stat_tab_income]:
             btn.setCheckable(True)
             btn.setCursor(Qt.PointingHandCursor)
-            btn.setStyleSheet("""
-                QPushButton {
-                    background-color: #f0f0f0;
-                    color: #595959;
-                    border: none;
-                    border-radius: 6px;
-                    padding: 8px 20px;
-                    font-size: 13px;
-                    font-weight: bold;
-                }
-                QPushButton:checked {
-                    background-color: #1890ff;
-                    color: white;
-                }
-            """)
+            btn.setObjectName("statTypeTab")
             tabs_layout.addWidget(btn)
         self.stat_type_group.addButton(self.stat_tab_expense)
         self.stat_type_group.addButton(self.stat_tab_income)
@@ -913,7 +869,7 @@ class MainWindow(QMainWindow):
         if not categories:
             empty = QLabel("暂无数据")
             empty.setAlignment(Qt.AlignCenter)
-            empty.setStyleSheet("color: #8c8c8c; font-size: 14px; padding: 40px;")
+            empty.setObjectName("statisticsEmpty")
             self.stat_content_layout.addWidget(empty)
             self.stat_content_layout.addStretch()
             return
@@ -921,13 +877,7 @@ class MainWindow(QMainWindow):
         for cat in categories:
             pct = (cat['total'] / total * 100) if total > 0 else 0
             row = QFrame()
-            row.setStyleSheet("""
-                QFrame {
-                    background-color: #fafafa;
-                    border-radius: 10px;
-                    padding: 8px;
-                }
-            """)
+            row.setObjectName("statisticsRow")
             row_layout = QHBoxLayout(row)
             row_layout.setContentsMargins(16, 12, 16, 12)
 
@@ -938,18 +888,18 @@ class MainWindow(QMainWindow):
             name_layout = QVBoxLayout()
             name_label = QLabel(cat.get('name') or '未分类')
             name_label.setFont(QFont("", 13, QFont.Bold))
-            name_label.setStyleSheet("color: #1a1a1a;")
+            name_label.setObjectName("statisticsName")
             name_layout.addWidget(name_label)
 
             bar = QProgressBar()
             bar.setRange(0, 100)
             bar.setValue(int(pct))
             bar.setFormat(f"{pct:.1f}%")
-            bar_color = "#52c41a" if tx_type == 'income' else "#f5222d"
+            bar_color = "#5e8a69" if tx_type == 'income' else "#b85f45"
             bar.setStyleSheet(f"""
-                QProgressBar {{ border: none; border-radius: 6px; background-color: #f0f0f0;
+                QProgressBar {{ border: none; border-radius: 6px; background-color: #ede5d7;
                     text-align: center; min-height: 16px; max-height: 16px;
-                    color: #595959; font-size: 11px; }}
+                    color: #49443d; font-size: 11px; }}
                 QProgressBar::chunk {{ border-radius: 6px; background-color: {bar_color}; }}
             """)
             name_layout.addWidget(bar)
@@ -958,9 +908,9 @@ class MainWindow(QMainWindow):
             amount_label = QLabel(f"¥ {cat['total']:,.2f}")
             amount_label.setFont(QFont("", 14, QFont.Bold))
             if tx_type == 'income':
-                amount_label.setStyleSheet("color: #52c41a;")
+                amount_label.setStyleSheet("color: #5e8a69;")
             else:
-                amount_label.setStyleSheet("color: #f5222d;")
+                amount_label.setStyleSheet("color: #b85f45;")
             row_layout.addWidget(amount_label)
 
             self.stat_content_layout.addWidget(row)
@@ -975,9 +925,9 @@ class MainWindow(QMainWindow):
         layout.setSpacing(12)
 
         header = QHBoxLayout()
-        title = QLabel("账号列表")
+        title = QLabel("店主账号")
         title.setFont(QFont("Microsoft YaHei", 14, QFont.Bold))
-        title.setStyleSheet("color: #1a1a1a; padding: 8px 0;")
+        title.setObjectName("accountPageTitle")
         header.addWidget(title)
         header.addStretch()
 
@@ -1018,7 +968,7 @@ class MainWindow(QMainWindow):
         for row, acc in enumerate(accounts):
             accountcode_item = QTableWidgetItem(str(acc['accountcode']))
             accountcode_item.setTextAlignment(Qt.AlignCenter)
-            accountcode_item.setForeground(QColor("#1890ff"))
+            accountcode_item.setForeground(QColor("#315f4c"))
             self.account_table.setItem(row, 0, accountcode_item)
 
             username_item = QTableWidgetItem(acc['username'])
@@ -1028,13 +978,13 @@ class MainWindow(QMainWindow):
 
             create_time_item = QTableWidgetItem(acc.get('createTime', ''))
             create_time_item.setTextAlignment(Qt.AlignCenter)
-            create_time_item.setForeground(QColor("#8c8c8c"))
+            create_time_item.setForeground(QColor("#7c7468"))
             create_time_item.setFont(QFont("Microsoft YaHei", 9))
             self.account_table.setItem(row, 2, create_time_item)
 
             update_time_item = QTableWidgetItem(acc.get('updateTime', ''))
             update_time_item.setTextAlignment(Qt.AlignCenter)
-            update_time_item.setForeground(QColor("#8c8c8c"))
+            update_time_item.setForeground(QColor("#7c7468"))
             update_time_item.setFont(QFont("Microsoft YaHei", 9))
             self.account_table.setItem(row, 3, update_time_item)
 
@@ -1045,43 +995,18 @@ class MainWindow(QMainWindow):
             action_layout.setSpacing(8)
 
             edit_btn = QPushButton("编辑")
+            edit_btn.setObjectName("accountEditButton")
             edit_btn.setCursor(Qt.PointingHandCursor)
             edit_btn.setFixedSize(56, 28)
-            edit_btn.setStyleSheet("""
-                QPushButton {
-                    background-color: transparent;
-                    color: #1890ff;
-                    border: 1px solid #1890ff;
-                    border-radius: 4px;
-                    font-size: 12px;
-                }
-                QPushButton:hover {
-                    background-color: #1890ff;
-                    color: white;
-                }
-            """)
             edit_btn.clicked.connect(lambda checked, a=acc: self.on_edit_account(a))
             action_layout.addWidget(edit_btn)
             action_layout.addStretch()
 
             is_admin = acc['username'] == 'admin'
             del_btn = QPushButton("删除")
+            del_btn.setObjectName("accountDeleteButton")
             del_btn.setCursor(Qt.PointingHandCursor)
             del_btn.setFixedSize(56, 28)
-            del_color = "#bfbfbf" if is_admin else "#ff4d4f"
-            del_btn.setStyleSheet(f"""
-                QPushButton {{
-                    background-color: transparent;
-                    color: {del_color};
-                    border: 1px solid {del_color};
-                    border-radius: 4px;
-                    font-size: 12px;
-                }}
-                QPushButton:hover {{
-                    background-color: {del_color};
-                    color: white;
-                }}
-            """)
             del_btn.setEnabled(not is_admin)
             del_btn.clicked.connect(lambda checked, account=acc: self.on_delete_account(account))
             action_layout.addWidget(del_btn)

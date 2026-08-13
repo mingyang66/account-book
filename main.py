@@ -13,7 +13,7 @@ from styles import MAIN_STYLE
 from database import Database
 from session import UserSession
 from security import PasswordHasher
-from services import AccountService, AuthService, TransactionService
+from services import AccountService, AuthService, NotebookService, TransactionService
 
 
 def main():
@@ -39,6 +39,7 @@ def main():
             # 会话包含当前用户状态，因此每轮登录都创建新的独立对象。
             session = UserSession()
             auth_service = AuthService(database, password_hasher, session)
+            notebook_service = NotebookService(database, session)
             transaction_service = TransactionService(database, session)
 
             # LoginDialog 只调用认证服务；登录成功后会话已经写入用户信息。
@@ -51,6 +52,7 @@ def main():
                 transaction_service,
                 account_service,
                 auth_service,
+                notebook_service,
                 session,
             )
             window.show()

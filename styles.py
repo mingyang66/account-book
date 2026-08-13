@@ -827,11 +827,144 @@ QMenu#accountMenu::separator {
     margin: 5px 8px;
 }
 
-QLabel#dashboard_title, QLabel#accountPageTitle {
+QLabel#dashboard_title, QLabel#accountPageTitle, QLabel#notebookPageTitle {
     color: #292621;
     font-size: 17px;
     font-weight: bold;
     padding: 4px 0;
+}
+
+QLabel#notebookDescription {
+    color: #7c7468;
+    font-size: 12px;
+    padding-bottom: 4px;
+}
+
+QLabel#notebookListEmpty {
+    color: #8c8377;
+    font-size: 13px;
+    padding: 30px 12px;
+}
+
+QLineEdit#notebookSearch {
+    background-color: #fffdf8;
+}
+
+QSplitter#notebookSplitter::handle {
+    background-color: #e9e0d1;
+    width: 1px;
+}
+
+QFrame#notebookListPanel, QFrame#notebookEditorPanel {
+    background-color: #fffdf8;
+    border: 1px solid #ded2bd;
+    border-radius: 10px;
+}
+
+QListWidget#notebookList {
+    background-color: transparent;
+    border: none;
+    outline: none;
+    padding: 6px;
+}
+
+QListWidget#notebookList::item {
+    background-color: #faf6ed;
+    border: 1px solid #e4d9c6;
+    border-radius: 8px;
+}
+
+QListWidget#notebookList::item:hover {
+    background-color: #f3ecdf;
+    border-color: #c8bca8;
+}
+
+QListWidget#notebookList::item:selected {
+    background-color: #e3ece5;
+    border-color: #5e8a69;
+}
+
+QLabel#notebookCardTitle {
+    color: #292621;
+    font-size: 13px;
+    font-weight: bold;
+}
+
+QLabel#notebookCardUpdateTime {
+    color: #9b9286;
+    font-size: 11px;
+}
+
+QLabel#notebookDateHeader, QLabel#notebookDateHeaderToday {
+    color: #8c8377;
+    font-size: 11px;
+    font-weight: bold;
+}
+
+QLabel#notebookDateHeaderToday {
+    color: #315f4c;
+}
+
+QLabel#notebookEditorHint, QLabel#notebookSaveState {
+    color: #948a7b;
+    font-size: 11px;
+}
+
+QLineEdit#notebookEditorTitle {
+    background-color: transparent;
+    color: #292621;
+    border: none;
+    border-bottom: 1px solid #e4d9c6;
+    border-radius: 0;
+    padding: 6px 2px;
+    font-size: 19px;
+    font-weight: bold;
+}
+
+QLineEdit#notebookEditorTitle:focus {
+    border-bottom-color: #5e8a69;
+}
+
+QTextEdit#notebookEditorContent {
+    background-color: #fffdf8;
+    color: #292621;
+    border: none;
+    padding: 4px 2px;
+    font-size: 13px;
+}
+
+QFrame#notebookEditorPanel:disabled {
+    background-color: #faf6ed;
+}
+
+QPushButton#notebookCancelButton {
+    background-color: #faf6ed;
+    color: #49443d;
+    border: 1px solid #d8ccb7;
+    border-radius: 7px;
+}
+
+QPushButton#notebookCancelButton:hover {
+    background-color: #ede5d7;
+}
+
+QPushButton#notebookSaveButton {
+    background-color: #315f4c;
+    color: #fffdf8;
+    border: 1px solid #315f4c;
+    border-radius: 7px;
+    font-weight: bold;
+}
+
+QPushButton#notebookSaveButton:hover {
+    background-color: #3d745d;
+}
+
+QPushButton#notebookSaveButton:disabled,
+QPushButton#notebookCancelButton:disabled {
+    background-color: #ede8de;
+    color: #aaa195;
+    border-color: #d8d0c4;
 }
 
 QLabel#dashboard_section_title {
@@ -1002,7 +1135,7 @@ QComboBox#txTypeFilter QAbstractItemView {
     selection-color: #315f4c;
 }
 
-QPushButton#add_btn, QPushButton#account_add_btn {
+QPushButton#add_btn, QPushButton#account_add_btn, QPushButton#notebookAddButton {
     background: #315f4c;
     color: #fffdf8;
     border: 1px solid #315f4c;
@@ -1010,12 +1143,12 @@ QPushButton#add_btn, QPushButton#account_add_btn {
     font-weight: bold;
 }
 
-QPushButton#add_btn:hover, QPushButton#account_add_btn:hover {
+QPushButton#add_btn:hover, QPushButton#account_add_btn:hover, QPushButton#notebookAddButton:hover {
     background: #3d745d;
     border-color: #3d745d;
 }
 
-QPushButton#add_btn:pressed, QPushButton#account_add_btn:pressed {
+QPushButton#add_btn:pressed, QPushButton#account_add_btn:pressed, QPushButton#notebookAddButton:pressed {
     background: #244c3c;
     border-color: #244c3c;
 }
@@ -1033,14 +1166,14 @@ QPushButton#query_btn:hover {
     border-color: #5e8a69;
 }
 
-QPushButton#edit_btn, QPushButton#accountEditButton {
+QPushButton#edit_btn, QPushButton#accountEditButton, QPushButton#notebookEditButton {
     background-color: #fbf1d8;
     color: #8b6828;
     border: 1px solid #d9bd73;
     border-radius: 6px;
 }
 
-QPushButton#edit_btn:hover, QPushButton#accountEditButton:hover {
+QPushButton#edit_btn:hover, QPushButton#accountEditButton:hover, QPushButton#notebookEditButton:hover {
     background-color: #f2dfa9;
 }
 

@@ -4,7 +4,7 @@ from PySide6.QtWidgets import (
     QTableWidget, QTableWidgetItem, QHeaderView,
     QComboBox, QMessageBox, QGridLayout,
     QScrollArea, QSizePolicy, QButtonGroup, QProgressBar,
-    QLineEdit, QAbstractItemView, QMenu, QDialog, QToolTip
+    QAbstractItemView, QMenu, QDialog, QToolTip
 )
 from PySide6.QtCore import Qt, QDate, QPointF, QTimer
 from PySide6.QtGui import QFont, QColor, QIcon, QPainter, QCursor, QPen
@@ -16,17 +16,20 @@ from ui.account_dialog import AccountFormDialog
 from ui.date_range_picker import DateRangePicker
 from ui.month_picker import MonthPicker
 from ui.confirm_dialog import ConfirmDialog
+from ui.notebook_page import NotebookPage
 from datetime import date, datetime
 
 
 class MainWindow(QMainWindow):
     def __init__(
-        self, transaction_service, account_service, auth_service, session
+        self, transaction_service, account_service, auth_service,
+        notebook_service, session
     ):
         super().__init__()
         self.transaction_service = transaction_service
         self.account_service = account_service
         self.auth_service = auth_service
+        self.notebook_service = notebook_service
         self.session = session
         self._logged_out = False
         self.setWindowTitle("小妖杂货铺 - 账房管理")
@@ -35,7 +38,6 @@ class MainWindow(QMainWindow):
         self.setup_ui()
         self.nav_buttons[0].setChecked(True)
         self.stacked.setCurrentIndex(0)
-        self.refresh_dashboard()
 
     def setup_ui(self):
         central = QWidget()
@@ -56,7 +58,9 @@ class MainWindow(QMainWindow):
         content_layout.addWidget(header)
 
         self.stacked = QStackedWidget()
+        self.notebook_page = NotebookPage(self.notebook_service)
         self.pages = [
+            self.notebook_page,
             self.create_dashboard_page(),
             self.create_transactions_page(),
             self.create_statistics_page(),
@@ -93,6 +97,7 @@ class MainWindow(QMainWindow):
 
         self.nav_buttons = []
         nav_items = [
+            ("记事本", "notebooks"),
             ("今日概览", "dashboard"),
             ("收支明细", "transactions"),
             ("经营统计", "statistics"),
@@ -121,7 +126,7 @@ class MainWindow(QMainWindow):
         layout = QHBoxLayout(header)
         layout.setContentsMargins(24, 0, 24, 0)
 
-        self.page_title = QLabel("今日概览")
+        self.page_title = QLabel("记事本")
         self.page_title.setObjectName("mainPageTitle")
         layout.addWidget(self.page_title)
 
@@ -164,13 +169,20 @@ class MainWindow(QMainWindow):
         self.clock_label.setText(datetime.now().strftime("%Y年%m月%d日 %H:%M:%S"))
 
     def on_account_btn_click(self):
-        self.stacked.setCurrentIndex(3)
+        if (
+            self.stacked.currentWidget() is self.notebook_page
+            and not self.notebook_page.resolve_unsaved_changes()
+        ):
+            return
+        self.stacked.setCurrentWidget(self.account_page)
         self.refresh_accounts()
         for btn in self.nav_buttons:
             btn.setChecked(False)
         self.page_title.setText("账号管理")
 
     def on_logout(self):
+        if not self.notebook_page.resolve_unsaved_changes():
+            return
         confirmed = ConfirmDialog.ask(
             self,
             "退出登录",
@@ -183,17 +195,29 @@ class MainWindow(QMainWindow):
             self._logged_out = True
             self.close()
 
+    def closeEvent(self, event):
+        if self.notebook_page.resolve_unsaved_changes():
+            event.accept()
+        else:
+            event.ignore()
+
     def on_nav_clicked(self, idx):
-        titles = ["今日概览", "收支明细", "经营统计"]
+        if (
+            idx != 0
+            and self.stacked.currentWidget() is self.notebook_page
+            and not self.notebook_page.resolve_unsaved_changes()
+        ):
+            return
+        titles = ["记事本", "今日概览", "收支明细", "经营统计"]
         for i, btn in enumerate(self.nav_buttons):
             btn.setChecked(i == idx)
         self.stacked.setCurrentIndex(idx)
         self.page_title.setText(titles[idx])
-        if idx == 0:
+        if idx == 1:
             self.refresh_dashboard()
-        elif idx == 1:
-            self.refresh_transactions()
         elif idx == 2:
+            self.refresh_transactions()
+        elif idx == 3:
             self.refresh_statistics()
 
     # ==================== Dashboard Page ====================
@@ -282,7 +306,7 @@ class MainWindow(QMainWindow):
         view_all_button = QPushButton("查看全部  →")
         view_all_button.setObjectName("link_btn")
         view_all_button.setCursor(Qt.PointingHandCursor)
-        view_all_button.clicked.connect(lambda: self.on_nav_clicked(1))
+        view_all_button.clicked.connect(lambda: self.on_nav_clicked(2))
         recent_header.addWidget(view_all_button)
         layout.addLayout(recent_header)
 

@@ -68,5 +68,7 @@ class AccountService:
             return False, "admin 账号不可删除"
         if self.database.count_transactions_by_account(account["accountcode"]):
             return False, "该账号存在交易记录，无法删除"
+        if self.database.count_notebooks_by_account(account["accountcode"]):
+            return False, "该账号存在记事本，无法删除"
         self.database.delete_account(account_id)
         return True, "删除成功"

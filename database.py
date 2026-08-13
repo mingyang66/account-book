@@ -9,7 +9,7 @@ from typing import List, Dict, Optional
 
 
 class Database:
-    """提供账号、分类和交易记录的底层持久化接口。"""
+    """提供账号、分类、交易记录和记事本的底层持久化接口。"""
 
     def __init__(self, db_path: str = "account_book.db"):
         """连接 SQLite 数据库并初始化表结构及默认分类。"""
@@ -43,20 +43,12 @@ class Database:
         ).fetchone()
         return dict(row) if row else None
 
-    def get_account_by_username(self, username: str) -> Optional[Dict]:
-        """按用户名查询不含密码的基础账号信息。"""
-        row = self.conn.execute(
-            "SELECT id, accountcode, username FROM my_account WHERE username = ?",
-            (username,)
-        ).fetchone()
-        return dict(row) if row else None
-
     def update_password_hash(self, username: str, password_hash: str):
         """更新指定账号的密码哈希和更新时间。"""
         with self.conn:
             self.conn.execute(
                 """UPDATE my_account
-                   SET password = ?, updateTime = CURRENT_TIMESTAMP
+                   SET password = ?, updateTime = datetime('now', '+8 hours')
                    WHERE username = ?""",
                 (password_hash, username)
             )
@@ -105,14 +97,16 @@ class Database:
             if password_hash is not None:
                 self.conn.execute(
                     """UPDATE my_account
-                       SET username = ?, password = ?, updateTime = CURRENT_TIMESTAMP
+                       SET username = ?, password = ?,
+                           updateTime = datetime('now', '+8 hours')
                        WHERE id = ?""",
                     (username, password_hash, account_id)
                 )
             else:
                 self.conn.execute(
                     """UPDATE my_account
-                       SET username = ?, updateTime = CURRENT_TIMESTAMP
+                       SET username = ?,
+                           updateTime = datetime('now', '+8 hours')
                        WHERE id = ?""",
                     (username, account_id)
                 )
@@ -129,6 +123,13 @@ class Database:
         """统计指定账号拥有的交易记录数量。"""
         return self.conn.execute(
             "SELECT COUNT(*) FROM my_transactions WHERE accountcode = ?",
+            (accountcode,)
+        ).fetchone()[0]
+
+    def count_notebooks_by_account(self, accountcode: int) -> int:
+        """统计指定账号拥有的记事本数量。"""
+        return self.conn.execute(
+            "SELECT COUNT(*) FROM my_notebooks WHERE accountcode = ?",
             (accountcode,)
         ).fetchone()[0]
 
@@ -156,7 +157,8 @@ class Database:
                 ('其他收入', 'income', '💎'),
             ]
             self.cursor.executemany(
-                "INSERT INTO my_categories (name, type, icon) VALUES (?, ?, ?)",
+                """INSERT INTO my_categories (name, type, icon)
+                   VALUES (?, ?, ?)""",
                 default_categories
             )
             self.conn.commit()
@@ -171,19 +173,52 @@ class Database:
             self.cursor.execute("SELECT * FROM my_categories ORDER BY id")
         return [dict(row) for row in self.cursor.fetchall()]
 
-    def add_category(self, name: str, type: str, icon: str = '📁') -> int:
-        """新增分类并返回其数据库主键。"""
-        self.cursor.execute(
-            "INSERT INTO my_categories (name, type, icon) VALUES (?, ?, ?)",
-            (name, type, icon)
-        )
-        self.conn.commit()
-        return self.cursor.lastrowid
+    def add_notebook(self, accountcode: int, title: str, content: str) -> int:
+        """为指定账号新增记事本，并返回记事本主键。"""
+        with self.conn:
+            cursor = self.conn.execute(
+                """INSERT INTO my_notebooks (accountcode, title, content)
+                   VALUES (?, ?, ?)""",
+                (accountcode, title, content),
+            )
+        return cursor.lastrowid
 
-    def delete_category(self, category_id: int):
-        """按主键删除分类。"""
-        self.cursor.execute("DELETE FROM my_categories WHERE id = ?", (category_id,))
-        self.conn.commit()
+    def update_notebook(
+        self, accountcode: int, notebook_id: int, title: str, content: str
+    ) -> bool:
+        """更新指定账号的记事本，返回是否找到并更新记录。"""
+        with self.conn:
+            cursor = self.conn.execute(
+                """UPDATE my_notebooks
+                   SET title = ?, content = ?,
+                       updateTime = datetime('now', '+8 hours')
+                   WHERE id = ? AND accountcode = ?""",
+                (title, content, notebook_id, accountcode),
+            )
+        return cursor.rowcount > 0
+
+    def get_notebook(self, accountcode: int, notebook_id: int) -> Optional[Dict]:
+        """按账号和主键查询单个记事本。"""
+        row = self.conn.execute(
+            """SELECT id, accountcode, title, content, createTime, updateTime
+               FROM my_notebooks WHERE id = ? AND accountcode = ?""",
+            (notebook_id, accountcode),
+        ).fetchone()
+        return dict(row) if row else None
+
+    def get_notebooks(self, accountcode: int, keyword: str = "") -> List[Dict]:
+        """按创建日期分组、组内更新时间倒序查询指定账号的记事本。"""
+        query = """SELECT id, accountcode, title, content, createTime, updateTime
+                   FROM my_notebooks WHERE accountcode = ?"""
+        params = [accountcode]
+        if keyword:
+            query += " AND (title LIKE ? OR content LIKE ?)"
+            pattern = f"%{keyword}%"
+            params.extend((pattern, pattern))
+        query += """ ORDER BY date(createTime) DESC,
+                     updateTime DESC, id DESC"""
+        rows = self.conn.execute(query, params).fetchall()
+        return [dict(row) for row in rows]
 
     def add_transaction(self, accountcode: int, type: str, amount: float, category_id: int,
                        note: str, date: str) -> int:
@@ -201,7 +236,9 @@ class Database:
                            category_id: int, note: str, date: str):
         """更新指定账号的交易，账号编号用于限制数据访问范围。"""
         self.cursor.execute(
-            """UPDATE my_transactions SET type=?, amount=?, category_id=?, note=?, date=?, updateTime=CURRENT_TIMESTAMP
+            """UPDATE my_transactions
+               SET type=?, amount=?, category_id=?, note=?, date=?,
+                   updateTime=datetime('now', '+8 hours')
                WHERE id=? AND accountcode=?""",
             (type, amount, category_id, note, date, id, accountcode)
         )

@@ -718,13 +718,6 @@ QLabel#sidebarBrand {
     padding-top: 20px;
 }
 
-QLabel#sidebarSubtitle {
-    color: #b9cebf;
-    font-size: 9px;
-    font-weight: bold;
-    letter-spacing: 2px;
-}
-
 QPushButton#nav_btn {
     background-color: transparent;
     color: #dce8df;
@@ -748,16 +741,6 @@ QPushButton#nav_btn:checked {
     border-left: 4px solid #d4a64e;
     padding-left: 18px;
     font-weight: bold;
-}
-
-QLabel#storeStatus {
-    background-color: rgba(255, 253, 248, 20);
-    color: #d9c98f;
-    border: 1px solid rgba(255, 253, 248, 34);
-    border-radius: 8px;
-    margin: 8px 14px;
-    padding: 9px;
-    font-size: 11px;
 }
 
 QFrame#mainHeader {

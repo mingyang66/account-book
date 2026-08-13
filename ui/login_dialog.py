@@ -31,22 +31,10 @@ QFrame#loginCard {
     border-radius: 22px;
 }
 
-QLabel#eyebrowLabel {
-    color: #b45f43;
-    font-size: 12px;
-    font-weight: bold;
-    letter-spacing: 2px;
-}
-
 QLabel#titleLabel {
     color: #24463a;
     font-size: 30px;
     font-weight: bold;
-}
-
-QLabel#subtitleLabel {
-    color: #7c7468;
-    font-size: 13px;
 }
 
 QLabel#fieldLabel {
@@ -123,10 +111,6 @@ QPushButton#loginButton:focus {
     border: 2px solid #9eb49c;
 }
 
-QLabel#tipLabel {
-    color: #948a7b;
-    font-size: 11px;
-}
 """
 
 
@@ -248,7 +232,7 @@ class LoginDialog(QDialog):
         self.password_visible = False
 
         self.setObjectName("LoginDialog")
-        self.setWindowTitle("小妖杂货铺 - 店主登录")
+        self.setWindowTitle("小妖杂货铺 - 主理人登录")
         self.setFixedSize(860, 560)
         self.setStyleSheet(LOGIN_STYLE)
         self.setup_ui()
@@ -283,22 +267,12 @@ class LoginDialog(QDialog):
         card_layout.setContentsMargins(34, 34, 34, 30)
         card_layout.setSpacing(0)
 
-        eyebrow = QLabel("SHOPKEEPER  ·  LOGIN")
-        eyebrow.setObjectName("eyebrowLabel")
-        card_layout.addWidget(eyebrow)
-        card_layout.addSpacing(8)
-
         title = QLabel("欢迎回来")
         title.setObjectName("titleLabel")
         card_layout.addWidget(title)
-        card_layout.addSpacing(5)
-
-        subtitle = QLabel("登录后继续打理你的每一笔账目")
-        subtitle.setObjectName("subtitleLabel")
-        card_layout.addWidget(subtitle)
         card_layout.addSpacing(27)
 
-        username_label = QLabel("店主账号")
+        username_label = QLabel("主理人账号")
         username_label.setObjectName("fieldLabel")
         card_layout.addWidget(username_label)
         card_layout.addSpacing(7)
@@ -335,17 +309,12 @@ class LoginDialog(QDialog):
         card_layout.addWidget(self.error_label)
         card_layout.addSpacing(8)
 
-        login_button = QPushButton("进入店铺")
+        login_button = QPushButton("进入杂货铺")
         login_button.setObjectName("loginButton")
         login_button.setCursor(Qt.PointingHandCursor)
         login_button.clicked.connect(self.on_login)
         card_layout.addWidget(login_button)
         card_layout.addStretch()
-
-        tip = QLabel("认真记下日常，也收藏生活的小确幸")
-        tip.setObjectName("tipLabel")
-        tip.setAlignment(Qt.AlignCenter)
-        card_layout.addWidget(tip)
 
         main_layout.addWidget(card)
         self.username_input.setFocus()
@@ -415,7 +384,7 @@ class LoginDialog(QDialog):
         password = self.password_input.text().strip()
 
         if not username:
-            self.set_error(self.username_frame, "请填写店主账号")
+            self.set_error(self.username_frame, "请填写主理人账号")
             self.username_input.setFocus()
             return
 

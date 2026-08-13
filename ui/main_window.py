@@ -32,7 +32,7 @@ class MainWindow(QMainWindow):
         self.notebook_service = notebook_service
         self.session = session
         self._logged_out = False
-        self.setWindowTitle("小妖杂货铺 - 账房管理")
+        self.setWindowTitle("小妖杂货铺 - 主理人")
         self.setMinimumSize(1000, 650)
         self.resize(1100, 700)
         self.setup_ui()
@@ -89,10 +89,6 @@ class MainWindow(QMainWindow):
         brand.setAlignment(Qt.AlignCenter)
         layout.addWidget(brand)
 
-        brand_subtitle = QLabel("GROCERY  ·  LEDGER")
-        brand_subtitle.setObjectName("sidebarSubtitle")
-        brand_subtitle.setAlignment(Qt.AlignCenter)
-        layout.addWidget(brand_subtitle)
         layout.addSpacing(28)
 
         self.nav_buttons = []
@@ -113,10 +109,6 @@ class MainWindow(QMainWindow):
 
         layout.addStretch()
 
-        status = QLabel("●  今日营业中")
-        status.setObjectName("storeStatus")
-        status.setAlignment(Qt.AlignCenter)
-        layout.addWidget(status)
         return sidebar
 
     def create_header(self):
@@ -949,7 +941,7 @@ class MainWindow(QMainWindow):
         layout.setSpacing(12)
 
         header = QHBoxLayout()
-        title = QLabel("店主账号")
+        title = QLabel("主理人账号")
         title.setFont(QFont("Microsoft YaHei", 14, QFont.Bold))
         title.setObjectName("accountPageTitle")
         header.addWidget(title)
